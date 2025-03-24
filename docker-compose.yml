@@ -1,5 +1,5 @@
 services:
-
+#FLUENTD CONTAINER
   fluentd:
     image: fluent/fluentd:v1.16
     volumes:
@@ -9,6 +9,7 @@ services:
       - "514:514/udp"
     command: fluentd -c /fluentd/etc/fluent.conf
 
+#ZOOKEEPER KAFKA KAFKA-CONNECT CONTAINER
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     environment:
@@ -35,28 +36,36 @@ services:
     hostname: kafka
     networks:
       - fluentkafka
+      - hdfs_network
 
-  spark:
-    image: docker.io/bitnami/spark:3
-    container_name: spark_master
-    hostname: spark_master
-    user: root
+  kafka-connect:
+    image: confluentinc/cp-kafka-connect:7.3.0
+    depends_on:
+      - kafka
+      - namenode
     environment:
-      - SPARK_MODE=master
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-      - SPARK_SSL_ENABLED=no
+      CONNECT_BOOTSTRAP_SERVERS: kafka:9092  # Internal Kafka listener
+      CONNECT_REST_PORT: 8083
+      CONNECT_GROUP_ID: hdfs-sink-group
+      CONNECT_CONFIG_STORAGE_TOPIC: connect-configs
+      CONNECT_OFFSET_STORAGE_TOPIC: connect-offsets
+      CONNECT_STATUS_STORAGE_TOPIC: connect-status
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+      CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components
+      CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
     ports:
-      - '8080:8080'
+      - "8083:8083"
     volumes:
-      - ../streamingProje:/home
-      - /opt/spark/conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
-      - /opt/spark/jars:/opt/bitnami/spark/ivy:z
+      - ./kafka-connect-plugins:/usr/share/confluent-hub-components  # For HDFS connector
     networks:
-      datapipeline:
-        ipv4_address: 172.19.0.2
+      - fluentkafka
+      - hdfs_network 
 
+#HDFS CONTAINER
   namenode:
     image: apache/hadoop:3.3.5
     container_name: namenode
@@ -111,6 +120,29 @@ services:
       hdfs_network:
         ipv4_address: 172.20.0.4
 
+#SPARK CONTAINER
+  spark:
+    image: docker.io/bitnami/spark:3
+    container_name: spark_master
+    hostname: spark_master
+    user: root
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    ports:
+      - '8080:8080'
+    volumes:
+      - ../streamingProje:/home
+      - /opt/spark/conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
+      - /opt/spark/jars:/opt/bitnami/spark/ivy:z
+    networks:
+      datapipeline:
+        ipv4_address: 172.19.0.2
+
+#POSTGRES CONTAINER
   db:
     image: postgres:15
     environment:
@@ -122,6 +154,7 @@ services:
     ports:
       - "5432:5432"
 
+#GRAFANA CONTAINER
   grafana:
     image: grafana/grafana:10.0.0
     ports:
@@ -129,6 +162,7 @@ services:
     volumes:
       - ./grafana_data:/var/lib/grafana²
 
+#NETWORKS
 networks:
 
   hdfs_network:

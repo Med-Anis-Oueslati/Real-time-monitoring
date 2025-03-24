@@ -3,4 +3,3 @@ hadoop_namenode/
 postgres_data/
 hadoop_datanode1/
 .venv/
-postgres_data

@@ -73,13 +73,18 @@ services:
     user: root
     environment:
       - HADOOP_HOME=/opt/hadoop
+      - JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.212.b04-0.el7_6.x86_64
+      - HDFS_NAMENODE_USER=root
+      - HDFS_DATANODE_USER=root  # For start-dfs.sh
+      - HDFS_SECONDARYNAMENODE_USER=root  # For secondary NameNode
     volumes:
       - ./hadoop_namenode:/opt/hadoop/data/nameNode
       - ./hadoop_config:/opt/hadoop/etc/hadoop
       - ./start-hdfs.sh:/start-hdfs.sh
     ports:
       - "9870:9870"
-    command: [ "/bin/bash", "/start-hdfs.sh" ]
+      - "8020:8020"
+    command: ["/bin/bash", "/start-hdfs.sh"]
     networks:
       hdfs_network:
         ipv4_address: 172.20.0.2
@@ -91,13 +96,15 @@ services:
     user: root
     environment:
       - HADOOP_HOME=/opt/hadoop
+      - JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.212.b04-0.el7_6.x86_64
+      - HDFS_DATANODE_USER=root
     volumes:
       - ./hadoop_datanode1:/opt/hadoop/data/dataNode
       - ./hadoop_config:/opt/hadoop/etc/hadoop
       - ./init-datanode.sh:/init-datanode.sh
     depends_on:
       - namenode
-    command: [ "/bin/bash", "/init-datanode.sh" ]
+    command: ["/bin/bash", "/init-datanode.sh"]
     networks:
       hdfs_network:
         ipv4_address: 172.20.0.3
@@ -109,13 +116,15 @@ services:
     user: root
     environment:
       - HADOOP_HOME=/opt/hadoop
+      - JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.212.b04-0.el7_6.x86_64
+      - HDFS_DATANODE_USER=root
     volumes:
       - ./hadoop_datanode2:/opt/hadoop/data/dataNode
       - ./hadoop_config:/opt/hadoop/etc/hadoop
       - ./init-datanode.sh:/init-datanode.sh
     depends_on:
       - namenode
-    command: [ "/bin/bash", "/init-datanode.sh" ]
+    command: ["/bin/bash", "/init-datanode.sh"]
     networks:
       hdfs_network:
         ipv4_address: 172.20.0.4
@@ -140,7 +149,7 @@ services:
       - /opt/spark/jars:/opt/bitnami/spark/ivy:z
     networks:
       datapipeline:
-        ipv4_address: 172.19.0.2
+        ipv4_address: 172.12.0.2
 
 #POSTGRES CONTAINER
   db:
@@ -175,7 +184,7 @@ networks:
     ipam:
       driver: default
       config:
-        - subnet: 172.19.0.0/16
+        - subnet: 172.12.0.0/16
 
   fluentkafka:
     driver: bridge

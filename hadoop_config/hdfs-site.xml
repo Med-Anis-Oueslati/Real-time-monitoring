@@ -1,14 +1,18 @@
 <configuration>
   <property>
     <name>dfs.replication</name>
-    <value>2</value>
+    <value>2</value>  <!-- 2 DataNodes -->
   </property>
   <property>
     <name>dfs.namenode.name.dir</name>
-    <value>/opt/hadoop/data/nameNode</value>
+    <value>file:///opt/hadoop/data/nameNode</value>
   </property>
   <property>
     <name>dfs.datanode.data.dir</name>
-    <value>/opt/hadoop/data/dataNode</value>
+    <value>file:///opt/hadoop/data/dataNode</value>
+  </property>
+  <property>
+    <name>dfs.namenode.rpc-address</name>
+    <value>namenode:8020</value>
   </property>
 </configuration>

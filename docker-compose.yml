@@ -73,7 +73,7 @@ services:
     user: root
     environment:
       - HADOOP_HOME=/opt/hadoop
-      - JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.212.b04-0.el7_6.x86_64
+      - JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.212.b04-0.el7_6.x86_64/jre
       - HDFS_NAMENODE_USER=root
       - HDFS_DATANODE_USER=root  # For start-dfs.sh
       - HDFS_SECONDARYNAMENODE_USER=root  # For secondary NameNode
@@ -96,7 +96,7 @@ services:
     user: root
     environment:
       - HADOOP_HOME=/opt/hadoop
-      - JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.212.b04-0.el7_6.x86_64
+      - JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.212.b04-0.el7_6.x86_64/jre
       - HDFS_DATANODE_USER=root
     volumes:
       - ./hadoop_datanode1:/opt/hadoop/data/dataNode
@@ -116,7 +116,7 @@ services:
     user: root
     environment:
       - HADOOP_HOME=/opt/hadoop
-      - JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.212.b04-0.el7_6.x86_64
+      - JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.212.b04-0.el7_6.x86_64/jre
       - HDFS_DATANODE_USER=root
     volumes:
       - ./hadoop_datanode2:/opt/hadoop/data/dataNode

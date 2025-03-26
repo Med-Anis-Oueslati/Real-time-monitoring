@@ -65,6 +65,17 @@ services:
     networks:
       - fluentkafka
       - hdfs_network 
+    user: root
+    command: 
+      - bash
+      - -c
+      - |
+        yum install -y wget java-1.8.0-openjdk && \
+        wget https://archive.apache.org/dist/hadoop/common/hadoop-3.3.5/hadoop-3.3.5.tar.gz && \
+        tar -xzf hadoop-3.3.5.tar.gz -C /opt && \
+        ln -s /opt/hadoop-3.3.5 /opt/hadoop && \
+        rm hadoop-3.3.5.tar.gz && \
+        /etc/confluent/docker/run
 
 #HDFS CONTAINER
   namenode:

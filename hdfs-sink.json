@@ -1,16 +1,15 @@
 {
-    "name": "hdfs-sink",
-    "config": {
-      "connector.class": "io.confluent.connect.hdfs3.Hdfs3SinkConnector",
-      "tasks.max": "1",
-      "topics": "lubuntu_syslog,lubuntu_auth,lubuntu_misc",
-      "hdfs.url": "hdfs://namenode:8020",
-      "flush.size": "10",
-      "hadoop.conf.dir": "/opt/hadoop/etc/hadoop",
-      "key.converter": "org.apache.kafka.connect.storage.StringConverter",
-      "value.converter": "org.apache.kafka.connect.storage.StringConverter",
-      "partitioner.class": "io.confluent.connect.hdfs3.partitioner.DefaultPartitioner",
-      "directory": "/logs",
-      "format.class": "io.confluent.connect.hdfs.format.text.TextFormat"
-    }
+  "name": "hdfs-sink",
+  "config": {
+    "connector.class": "io.confluent.connect.hdfs3.Hdfs3SinkConnector",
+    "tasks.max": "1",
+    "topics": "lubuntu_syslog,lubuntu_auth,lubuntu_misc",
+    "hdfs.url": "hdfs://namenode:8020",
+    "flush.size": "10",
+    "hadoop.conf.dir": "/opt/hadoop/etc/hadoop",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "value.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "directory": "/logs",
+    "confluent.topic.bootstrap.servers": "kafka:9092"
   }
+}

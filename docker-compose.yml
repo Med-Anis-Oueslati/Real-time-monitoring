@@ -61,6 +61,7 @@ services:
       - "8083:8083"
     volumes:
       - ./kafka-connect-plugins:/usr/share/confluent-hub-components  # For HDFS connector
+      - ./hadoop_config:/opt/hadoop/etc/hadoop
     networks:
       - fluentkafka
       - hdfs_network 

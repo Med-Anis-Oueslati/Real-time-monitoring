@@ -3,13 +3,17 @@
   "config": {
     "connector.class": "io.confluent.connect.hdfs3.Hdfs3SinkConnector",
     "tasks.max": "1",
-    "topics": "lubuntu_syslog,lubuntu_auth,lubuntu_misc",
+    "topics": "lubuntu_syslog,lubuntu_auth,lubuntu_audit,lubuntu_firewall,lubuntu_kern,lubuntu_ufw,lubuntu_hardaware",    
     "hdfs.url": "hdfs://namenode:8020",
-    "flush.size": "10",
+    "storage.class": "io.confluent.connect.hdfs3.storage.HdfsStorage",
     "hadoop.conf.dir": "/opt/hadoop/etc/hadoop",
+    "hadoop.home": "/opt/hadoop",
     "key.converter": "org.apache.kafka.connect.storage.StringConverter",
     "value.converter": "org.apache.kafka.connect.storage.StringConverter",
-    "directory": "/logs",
-    "confluent.topic.bootstrap.servers": "kafka:9092"
+    "flush.size": "1000",
+    "confluent.topic.bootstrap.servers": "kafka:9092",
+    "hdfs.wal.enable": "false",
+    "hdfs.permissions.enabled": "false",
+    "errors.tolerance": "all"
   }
 }

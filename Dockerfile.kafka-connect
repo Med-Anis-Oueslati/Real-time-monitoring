@@ -1,0 +1,21 @@
+FROM confluentinc/cp-kafka-connect:7.3.0
+
+USER root
+
+# Install Hadoop with retries and verification
+RUN yum install -y wget java-1.8.0-openjdk && \
+    wget --tries=3 --waitretry=30 https://archive.apache.org/dist/hadoop/common/hadoop-3.3.5/hadoop-3.3.5.tar.gz && \
+    wget https://archive.apache.org/dist/hadoop/common/hadoop-3.3.5/hadoop-3.3.5.tar.gz.sha512 && \
+    sha512sum -c hadoop-3.3.5.tar.gz.sha512 && \
+    tar -xzf hadoop-3.3.5.tar.gz -C /opt && \
+    ln -s /opt/hadoop-3.3.5 /opt/hadoop && \
+    rm hadoop-3.3.5.tar.gz* && \
+    yum clean all
+
+ENV HADOOP_HOME=/opt/hadoop
+ENV PATH=$PATH:$HADOOP_HOME/bin
+ENV JAVA_HOME=/usr/lib/jvm/zulu11-ca
+ENV PATH=$JAVA_HOME/bin:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PATH
+COPY ./hadoop_config /opt/hadoop/etc/hadoop
+
+CMD ["/etc/confluent/docker/run"]

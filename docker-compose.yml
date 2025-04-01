@@ -39,12 +39,14 @@ services:
       - hdfs_network
 
   kafka-connect:
-    image: confluentinc/cp-kafka-connect:7.3.0
+    build:
+      context: .
+      dockerfile: Dockerfile.kafka-connect
     depends_on:
       - kafka
       - namenode
     environment:
-      CONNECT_BOOTSTRAP_SERVERS: kafka:9092  # Internal Kafka listener
+      CONNECT_BOOTSTRAP_SERVERS: kafka:9092
       CONNECT_REST_PORT: 8083
       CONNECT_GROUP_ID: hdfs-sink-group
       CONNECT_CONFIG_STORAGE_TOPIC: connect-configs
@@ -57,26 +59,17 @@ services:
       CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
       CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
       CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      JAVA_HOME: /usr/lib/jvm/zulu11-ca
+      PATH: /usr/lib/jvm/zulu11-ca/bin:$PATH:/opt/hadoop/bin:/opt/hadoop/sbin
+      HADOOP_HOME: /opt/hadoop
     ports:
       - "8083:8083"
     volumes:
-      - ./kafka-connect-plugins:/usr/share/confluent-hub-components  # For HDFS connector
-      - ./hadoop_config:/opt/hadoop/etc/hadoop
+      - ./kafka-connect-plugins:/usr/share/confluent-hub-components
+      - ./hadoop_config:/opt/hadoop/etc/hadoop:ro  # Read-only to preserve custom config
     networks:
       - fluentkafka
-      - hdfs_network 
-    user: root
-    command: 
-      - bash
-      - -c
-      - |
-        yum install -y wget java-1.8.0-openjdk && \
-        wget https://archive.apache.org/dist/hadoop/common/hadoop-3.3.5/hadoop-3.3.5.tar.gz && \
-        tar -xzf hadoop-3.3.5.tar.gz -C /opt && \
-        ln -s /opt/hadoop-3.3.5 /opt/hadoop && \
-        rm hadoop-3.3.5.tar.gz && \
-        /etc/confluent/docker/run
-
+      - hdfs_network
 #HDFS CONTAINER
   namenode:
     image: apache/hadoop:3.3.5

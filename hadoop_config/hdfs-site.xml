@@ -15,4 +15,14 @@
     <name>dfs.namenode.rpc-address</name>
     <value>namenode:8020</value>
   </property>
+  <property>
+    <name>dfs.namenode.safemode.threshold-pct</name>
+    <value>0.0</value>
+    <description>Disables Safe Mode at startup</description>
+</property>
+<property>
+    <name>dfs.namenode.safemode.min.datanodes</name>
+    <value>1</value>
+    <description>Minimum number of active DataNodes to leave Safe Mode</description>
+</property>
 </configuration>

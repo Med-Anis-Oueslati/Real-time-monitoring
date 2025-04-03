@@ -3,7 +3,7 @@
   "config": {
     "connector.class": "io.confluent.connect.hdfs3.Hdfs3SinkConnector",
     "tasks.max": "1",
-    "topics": "lubuntu_audit,lubuntu_auth,lubuntu_firewall,lubuntu_hardware,lubuntu_kern,lubuntu_syslog,lubuntu_ufw",    
+    "topics": "lubuntu_audit,lubuntu_auth,lubuntu_firewall,lubuntu_hardware,lubuntu_kern,lubuntu_syslog,lubuntu_ufw,kali_auth,kali_kern,kali_syslog",    
     "hdfs.url": "hdfs://namenode:8020",
     "storage.class": "io.confluent.connect.hdfs3.storage.HdfsStorage",
     "hadoop.conf.dir": "/opt/hadoop/etc/hadoop",

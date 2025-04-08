@@ -12,7 +12,7 @@ kafka_df = spark \
     .readStream \
     .format("kafka") \
     .option("kafka.bootstrap.servers", "kafka:9092") \
-    .option("subscribe", "kali_syslog") \
+    .option("subscribe", "lubuntu_auth") \
     .option("startingOffsets", "latest") \
     .load()
 

@@ -1,0 +1,59 @@
+{"message":"2025-04-07T12:30:01.145120+01:00 anis-virtualbox CRON[1836]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T12:30:01.150387+01:00 anis-virtualbox CRON[1836]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T12:35:01.161847+01:00 anis-virtualbox CRON[1909]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T12:35:01.170794+01:00 anis-virtualbox CRON[1909]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T12:36:47.879075+01:00 anis-virtualbox sudo: pam_unix(sudo:auth): authentication failure; logname=anis uid=1000 euid=0 tty=/dev/pts/2 ruser=anis rhost=  user=anis"}
+{"message":"2025-04-07T12:36:54.388158+01:00 anis-virtualbox dbus-daemon[804]: [system] Failed to activate service 'org.bluez': timed out (service_start_timeout=25000ms)"}
+{"message":"2025-04-07T12:36:56.593690+01:00 anis-virtualbox sudo:     anis : TTY=pts/2 ; PWD=/home/anis ; USER=root ; COMMAND=/usr/bin/su"}
+{"message":"2025-04-07T12:36:56.595061+01:00 anis-virtualbox sudo: pam_unix(sudo:session): session opened for user root(uid=0) by anis(uid=1000)"}
+{"message":"2025-04-07T12:36:56.602089+01:00 anis-virtualbox su[1974]: (to root) root on pts/3"}
+{"message":"2025-04-07T12:36:56.604534+01:00 anis-virtualbox su[1974]: pam_unix(su:session): session opened for user root(uid=0) by anis(uid=0)"}
+{"message":"2025-04-07T12:36:58.170036+01:00 anis-virtualbox su[1974]: pam_unix(su:session): session closed for user root"}
+{"message":"2025-04-07T12:36:58.175962+01:00 anis-virtualbox sudo: pam_unix(sudo:session): session closed for user root"}
+{"message":"2025-04-07T12:45:01.181456+01:00 anis-virtualbox CRON[2063]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T12:45:01.184532+01:00 anis-virtualbox CRON[2063]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T12:55:01.200556+01:00 anis-virtualbox CRON[2190]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T12:55:01.204381+01:00 anis-virtualbox CRON[2190]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T13:05:01.214862+01:00 anis-virtualbox CRON[2299]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T13:05:01.219649+01:00 anis-virtualbox CRON[2299]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T13:15:01.227397+01:00 anis-virtualbox CRON[2405]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T13:15:01.230254+01:00 anis-virtualbox CRON[2405]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T13:17:01.235790+01:00 anis-virtualbox CRON[2420]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T13:17:01.239953+01:00 anis-virtualbox CRON[2420]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T13:25:01.247332+01:00 anis-virtualbox CRON[2486]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T13:25:01.252004+01:00 anis-virtualbox CRON[2486]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T13:30:01.266214+01:00 anis-virtualbox CRON[2518]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T13:30:01.270410+01:00 anis-virtualbox CRON[2518]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T13:35:01.279873+01:00 anis-virtualbox CRON[2555]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T13:35:01.285409+01:00 anis-virtualbox CRON[2555]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T13:45:01.292291+01:00 anis-virtualbox CRON[2640]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T13:45:01.304193+01:00 anis-virtualbox CRON[2640]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T13:55:01.304452+01:00 anis-virtualbox CRON[2710]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T13:55:01.306948+01:00 anis-virtualbox CRON[2710]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T14:05:01.315023+01:00 anis-virtualbox CRON[2774]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T14:05:01.317430+01:00 anis-virtualbox CRON[2774]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T14:15:01.327701+01:00 anis-virtualbox CRON[2860]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T14:15:01.332521+01:00 anis-virtualbox CRON[2860]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T14:17:01.337138+01:00 anis-virtualbox CRON[2882]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T14:17:01.338850+01:00 anis-virtualbox CRON[2882]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T14:25:01.345845+01:00 anis-virtualbox CRON[2949]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T14:25:01.348524+01:00 anis-virtualbox CRON[2949]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T14:30:01.352910+01:00 anis-virtualbox CRON[2977]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T14:30:01.355784+01:00 anis-virtualbox CRON[2977]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T14:30:37.616126+01:00 anis-virtualbox sudo:     anis : TTY=pts/2 ; PWD=/home/anis ; USER=root ; COMMAND=/usr/bin/su"}
+{"message":"2025-04-07T14:30:37.619259+01:00 anis-virtualbox sudo: pam_unix(sudo:session): session opened for user root(uid=0) by anis(uid=1000)"}
+{"message":"2025-04-07T14:30:37.619612+01:00 anis-virtualbox su[2985]: (to root) root on pts/3"}
+{"message":"2025-04-07T14:30:37.619696+01:00 anis-virtualbox su[2985]: pam_unix(su:session): session opened for user root(uid=0) by anis(uid=0)"}
+{"message":"2025-04-07T14:30:39.585057+01:00 anis-virtualbox su[2985]: pam_unix(su:session): session closed for user root"}
+{"message":"2025-04-07T14:30:39.585799+01:00 anis-virtualbox sudo: pam_unix(sudo:session): session closed for user root"}
+{"message":"2025-04-07T14:35:01.361977+01:00 anis-virtualbox CRON[3018]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T14:35:01.363802+01:00 anis-virtualbox CRON[3018]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T14:45:01.378602+01:00 anis-virtualbox CRON[3069]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T14:45:01.383584+01:00 anis-virtualbox CRON[3069]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T14:55:01.393264+01:00 anis-virtualbox CRON[3135]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T14:55:01.396093+01:00 anis-virtualbox CRON[3135]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T15:05:01.402115+01:00 anis-virtualbox CRON[3264]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T15:05:01.405942+01:00 anis-virtualbox CRON[3264]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T15:15:01.412077+01:00 anis-virtualbox CRON[3326]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}
+{"message":"2025-04-07T15:15:01.413785+01:00 anis-virtualbox CRON[3326]: pam_unix(cron:session): session closed for user root"}
+{"message":"2025-04-07T15:17:01.419852+01:00 anis-virtualbox CRON[3333]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"}

@@ -1,0 +1,5 @@
+timestamp,hostname,process,pid,event_type,severity,message,log_source,processed_at
+2025-04-07T12:21:33.769+01:00,anis-virtualbox,su,1719,session_close,medium,pam_unix(su:session): session closed for user root,system,2025-04-07T14:18:42.282+01:00
+2025-04-07T12:21:33.772+01:00,anis-virtualbox,sudo,"",session_close,low,pam_unix(sudo:session): session closed for user root,system,2025-04-07T14:18:42.282+01:00
+2025-04-07T12:21:34.862+01:00,anis-virtualbox,dbus-daemon,804,error,high,[system] Failed to activate service 'org.bluez': timed out (service_start_timeout=25000ms),system,2025-04-07T14:18:42.282+01:00
+2025-04-07T12:25:01.129+01:00,anis-virtualbox,CRON,1766,session_open,low,pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0),system,2025-04-07T14:18:42.282+01:00

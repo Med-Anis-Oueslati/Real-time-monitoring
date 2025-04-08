@@ -148,6 +148,8 @@ services:
     networks:
       - fluentkafka
     command: bash -c "pip install pyspark kafka-python && /opt/bitnami/spark/bin/spark-class org.apache.spark.deploy.master.Master"
+    volumes:
+      - ./spark-scripts:/spark-scripts
 
   spark-worker:
     image: bitnami/spark:3.5.0

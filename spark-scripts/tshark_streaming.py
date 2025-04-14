@@ -10,6 +10,7 @@ spark = SparkSession.builder \
     .config("spark.executor.cores", "2") \
     .config("spark.driver.memory", "2g") \
     .config("spark.jars", "/opt/spark/jars/spark-sql-kafka-0-10_2.12-3.5.0.jar") \
+    .config("spark.kafka.consumer.pollTimeoutMs", "30000") \
     .getOrCreate()
 
 # Broadcast GeoLite2 database path
@@ -24,13 +25,13 @@ def get_geolocation(ip):
         return [
             response.location.latitude,
             response.location.longitude,
-            response.city.name  # Include city name
+            response.city.name
         ]
     except Exception:
         return [None, None, None]  # Return None values for invalid IPs
 
 # Register UDF
-get_geolocation_udf = udf(get_geolocation, ArrayType(StringType()))  # Use StringType for city name
+get_geolocation_udf = udf(get_geolocation, ArrayType(StringType()))
 
 # Kafka message schema
 kafka_message_schema = StructType([StructField("message", StringType(), True)])
@@ -63,10 +64,10 @@ enriched_df = parsed_df \
         col("fields").getItem(5).alias("ip_proto"),
         col("src_geo").getItem(0).alias("src_latitude"),
         col("src_geo").getItem(1).alias("src_longitude"),
-        col("src_geo").getItem(2).alias("src_city"),  # Add source city
+        col("src_geo").getItem(2).alias("src_city"),
         col("dst_geo").getItem(0).alias("dst_latitude"),
         col("dst_geo").getItem(1).alias("dst_longitude"),
-        col("dst_geo").getItem(2).alias("dst_city")   # Add destination city
+        col("dst_geo").getItem(2).alias("dst_city")
     )
 
 # Output to console

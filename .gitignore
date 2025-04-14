@@ -3,3 +3,5 @@ hadoop_namenode/
 postgres_data/
 hadoop_datanode1/
 .venv/
+GeoLite2-City.mmdb
+

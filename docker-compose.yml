@@ -32,6 +32,7 @@ services:
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://10.71.0.35:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_MESSAGE_MAX_BYTES: 0485760  # 10MB
+      KAFKA_DELETE_TOPIC_ENABLE: "true"
     ports:
       - "9093:9093"  # Maps EXTERNAL listener
     hostname: kafka
@@ -155,9 +156,18 @@ services:
     volumes:
       - ./spark-scripts:/spark-scripts
       - ./spark-jars/spark-sql-kafka-0-10_2.12-3.5.0.jar:/opt/spark/jars/spark-sql-kafka-0-10_2.12-3.5.0.jar
+      - ./spark-jars/kafka-clients-3.4.1.jar:/opt/spark/jars/kafka-clients-3.4.1.jar
+      - ./spark-jars/snowflake-jdbc-3.23.2.jar:/opt/spark/jars/snowflake-jdbc-3.23.2.jar
+      - ./spark-jars/spark-snowflake_2.12-3.1.1.jar:/opt/spark/jars/spark-snowflake_2.12-3.1.1.jar
+      - ./spark-jars/spark-streaming_2.12-3.5.0.jar:/opt/spark/jars/spark-streaming_2.12-3.5.0.jar
+      - ./spark-jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar:/opt/spark/jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar
+      - ./spark-jars/commons-pool2-2.11.1.jar:/opt/spark/jars/commons-pool2-2.11.1.jar
+      - ./spark-jars/jackson-core-2.15.2.jar:/opt/spark/jars/jackson-core-2.15.2.jar
+      - ./spark-jars/jackson-databind-2.15.2.jar:/opt/spark/jars/jackson-databind-2.15.2.jar
+      - ./spark-jars/jackson-annotations-2.15.2.jar:/opt/spark/jars/jackson-annotations-2.15.2.jar
       - ./spark-logs:/opt/spark/logs
-      - ./GeoLite2-City.mmdb:/opt/spark/GeoLite2-City.mmdb  # Add GeoIP database
-
+      - ./spark-conf/log4j.properties:/opt/spark/conf/log4j.properties
+      - ./GeoLite2-City.mmdb:/opt/spark/GeoLite2-City.mmdb
 
   spark-worker:
     image: bitnami/spark:3.5.0
@@ -176,8 +186,18 @@ services:
     volumes:
       - ./spark-scripts:/spark-scripts
       - ./spark-jars/spark-sql-kafka-0-10_2.12-3.5.0.jar:/opt/spark/jars/spark-sql-kafka-0-10_2.12-3.5.0.jar
+      - ./spark-jars/kafka-clients-3.4.1.jar:/opt/spark/jars/kafka-clients-3.4.1.jar
+      - ./spark-jars/snowflake-jdbc-3.23.2.jar:/opt/spark/jars/snowflake-jdbc-3.23.2.jar
+      - ./spark-jars/spark-snowflake_2.12-3.1.1.jar:/opt/spark/jars/spark-snowflake_2.12-3.1.1.jar
+      - ./spark-jars/spark-streaming_2.12-3.5.0.jar:/opt/spark/jars/spark-streaming_2.12-3.5.0.jar
+      - ./spark-jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar:/opt/spark/jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar
+      - ./spark-jars/commons-pool2-2.11.1.jar:/opt/spark/jars/commons-pool2-2.11.1.jar
+      - ./spark-jars/jackson-core-2.15.2.jar:/opt/spark/jars/jackson-core-2.15.2.jar
+      - ./spark-jars/jackson-databind-2.15.2.jar:/opt/spark/jars/jackson-databind-2.15.2.jar
+      - ./spark-jars/jackson-annotations-2.15.2.jar:/opt/spark/jars/jackson-annotations-2.15.2.jar
       - ./spark-logs:/opt/spark/logs
-      - ./GeoLite2-City.mmdb:/opt/spark/GeoLite2-City.mmdb  # Add GeoIP database
+      - ./spark-conf/log4j.properties:/opt/spark/conf/log4j.properties
+      - ./GeoLite2-City.mmdb:/opt/spark/GeoLite2-City.mmdb
 
 #POSTGRES CONTAINER
   db:

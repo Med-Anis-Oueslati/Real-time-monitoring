@@ -9,15 +9,27 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Initialize Spark session (unchanged)
+spark_jars = [
+    "/opt/spark/jars/spark-sql-kafka-0-10_2.12-3.5.0.jar",
+    "/opt/spark/jars/kafka-clients-3.4.1.jar",
+    "/opt/spark/jars/spark-streaming_2.12-3.5.0.jar",
+    "/opt/spark/jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar",
+    "/opt/spark/jars/commons-pool2-2.11.1.jar",
+    "/opt/spark/jars/snowflake-jdbc-3.23.2.jar",
+    "/opt/spark/jars/spark-snowflake_2.12-3.1.1.jar",
+    "/opt/spark/jars/jackson-databind-2.15.2.jar",
+    "/opt/spark/jars/jackson-core-2.15.2.jar",
+    "/opt/spark/jars/jackson-annotations-2.15.2.jar"
+]
 spark = SparkSession.builder \
     .appName("LogProcessing") \
-    .config("spark.executor.memory", "2g") \
-    .config("spark.executor.cores", "2") \
-    .config("spark.driver.memory", "2g") \
-    .config("spark.jars", "/opt/spark/jars/spark-sql-kafka-0-10_2.12-3.5.0.jar") \
+    .config("spark.executor.memory", "4g") \
+    .config("spark.executor.cores", "4") \
+    .config("spark.driver.memory", "4g") \
     .config("spark.kafka.consumer.pollTimeoutMs", "60000") \
     .config("spark.streaming.stopGracefullyOnShutdown", "true") \
     .config("spark.dynamicAllocation.enabled", "false") \
+    .config("spark.jars", ",".join(spark_jars)) \
     .getOrCreate()
 
 # Broadcast GeoLite2 database path (unchanged)
@@ -176,11 +188,32 @@ enriched_df = enriched_df.withColumn(
     )
 )
 
+
+snowflake_options = {
+    "sfURL": "https://WYIBXQD-NP85910.snowflakecomputing.com",
+    "sfAccount": "NP85910",
+    "sfUser": "MEDANISOUESLATI",
+    "sfPassword": "REDIphone11;:REDIphone11;:",
+    "sfDatabase": "spark_db",
+    "sfSchema": "spark_schema",
+    "sfWarehouse": "COMPUTE_WH",  # Default warehouse
+    "dbtable": "LOG_data",
+    "sfRole": "ACCOUNTADMIN"
+}
+
+
 # Output to console
+def write_to_snowflake(batch_df, batch_id):
+    batch_df.write \
+        .format("snowflake") \
+        .options(**snowflake_options) \
+        .option("dbtable", "LOG_data") \
+        .mode("append") \
+        .save()
+
 query = enriched_df.writeStream \
     .outputMode("append") \
-    .format("console") \
-    .option("truncate", "false") \
+    .foreachBatch(write_to_snowflake) \
     .start()
 
 try:

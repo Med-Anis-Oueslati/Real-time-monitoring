@@ -1,0 +1,25 @@
+--2025-04-20 23:34:18--  https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.15.2/jackson-databind-2.15.2.jar
+Resolving repo1.maven.org (repo1.maven.org)... 151.101.240.209, 2a04:4e42:39::209
+Connecting to repo1.maven.org (repo1.maven.org)|151.101.240.209|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 1620088 (1.5M) [application/java-archive]
+Saving to: ‘jackson-databind-2.15.2.jar’
+
+jackson-databind-2.15.2  91%[==========================>   ]   1.41M  --.-KB/s    eta 4m 25s jackson-databind-2.15.2  91%[==========================>   ]   1.41M  --.-KB/s    in 46m 1s  
+
+2025-04-21 00:20:19 (535 B/s) - Read error at byte 1478144/1620088 (Connection timed out). Retrying.
+
+--2025-04-21 00:20:20--  (try: 2)  https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.15.2/jackson-databind-2.15.2.jar
+Connecting to repo1.maven.org (repo1.maven.org)|151.101.240.209|:443... connected.
+HTTP request sent, awaiting response... 206 Partial Content
+Length: 1620088 (1.5M), 141944 (139K) remaining [application/java-archive]
+Saving to: ‘jackson-databind-2.15.2.jar’
+
+        [ skipping 1400K ]
+  1400K ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,....... 91% 9.53M 0s
+  1450K .......... .......... .......... .......... .......... 94%  598K 0s
+  1500K .......... .......... .......... .......... .......... 97% 1.04M 0s
+  1550K .......... .......... .......... ..                   100% 2.38M=0.1s
+
+2025-04-21 00:20:21 (931 KB/s) - ‘jackson-databind-2.15.2.jar’ saved [1620088/1620088]
+

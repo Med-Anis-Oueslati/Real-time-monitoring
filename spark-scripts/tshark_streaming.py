@@ -193,7 +193,7 @@ snowflake_options = {
     "sfURL": "https://WYIBXQD-NP85910.snowflakecomputing.com",
     "sfAccount": "NP85910",
     "sfUser": "MEDANISOUESLATI",
-    "sfPassword": "REDIphone11;:REDIphone11;:",
+    "sfPassword": "XXXXXXX",
     "sfDatabase": "spark_db",
     "sfSchema": "spark_schema",
     "sfWarehouse": "COMPUTE_WH",  # Default warehouse

@@ -2,6 +2,8 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, split, udf, from_json, size, when, to_timestamp, year, month, dayofmonth, hour, minute, second
 from pyspark.sql.types import StructType, StructField, StringType, ArrayType
 import geoip2.database
+from dotenv import load_dotenv
+import os
 import logging
 
 # Initialize logging
@@ -189,16 +191,20 @@ enriched_df = enriched_df.withColumn(
 )
 
 
+# Load environment variables from .env
+load_dotenv()
+
+# Get credentials from environment variables
 snowflake_options = {
-    "sfURL": "https://WYIBXQD-NP85910.snowflakecomputing.com",
-    "sfAccount": "NP85910",
-    "sfUser": "MEDANISOUESLATI",
-    "sfPassword": "XXXXXXX",
-    "sfDatabase": "spark_db",
-    "sfSchema": "spark_schema",
-    "sfWarehouse": "COMPUTE_WH",  # Default warehouse
-    "dbtable": "LOG_data",
-    "sfRole": "ACCOUNTADMIN"
+    "sfURL": os.getenv("SNOWFLAKE_URL"),
+    "sfAccount": os.getenv("SNOWFLAKE_ACCOUNT"),
+    "sfUser": os.getenv("SNOWFLAKE_USER"),
+    "sfPassword": os.getenv("SNOWFLAKE_PASSWORD"),
+    "sfDatabase": os.getenv("SNOWFLAKE_DATABASE"),
+    "sfSchema": os.getenv("SNOWFLAKE_SCHEMA"),
+    "sfWarehouse": os.getenv("SNOWFLAKE_WAREHOUSE"),
+    "sfRole": os.getenv("SNOWFLAKE_ROLE"),
+    "dbtable": os.getenv("SNOWFLAKE_TABLE")
 }
 
 

@@ -11,7 +11,7 @@ MODEL_PATH = "/home/anis/PFE/models/Lily-7B-Instruct-v0.2.Q5_K_M.gguf"
 KALI_VM_IP = "10.71.0.120" 
 KALI_VM_USER = "kali"
 KALI_VM_PASSWORD = "kali"  
-SCRIPT_DIR = "/home/kali/scripts"  # Directory on Kali VM where scripts will be stored
+SCRIPT_DIR = "/home/kali/scripts"  
 
 def load_llm():
     """Load a local GGUF model using llama-cpp-python."""
@@ -19,8 +19,8 @@ def load_llm():
         model_path=MODEL_PATH,
         n_ctx=2048,
         n_threads=4,
-        n_gpu_layers=20,  # Adjust based on your GPU capacity
-        use_mlock=True  # Prevent swapping
+        n_gpu_layers=20,  
+        use_mlock=True 
     )
     return llm
 

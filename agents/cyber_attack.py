@@ -1,168 +1,85 @@
+import os
 import uuid
 import datetime
 import paramiko
-import os
-from llama_cpp import Llama
+from dotenv import load_dotenv
+from langchain.chat_models import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
+from langchain.agents import initialize_agent, AgentType, Tool
+from langchain.schema import SystemMessage, HumanMessage
 
-# Path to your GGUF model
-MODEL_PATH = "/home/anis/PFE/models/Lily-7B-Instruct-v0.2.Q5_K_M.gguf"
+# Load environment variables
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Configuration for SSH connection
-KALI_VM_IP = "10.71.0.120" 
+# SSH Configuration
+KALI_VM_IP = "10.71.0.120"
 KALI_VM_USER = "kali"
-KALI_VM_PASSWORD = "kali"  
-SCRIPT_DIR = "/home/kali/scripts"  
+KALI_VM_PASSWORD = "kali"
+SCRIPT_DIR = "/home/kali/scripts"
 
-def load_llm():
-    """Load a local GGUF model using llama-cpp-python."""
-    llm = Llama(
-        model_path=MODEL_PATH,
-        n_ctx=2048,
-        n_threads=4,
-        n_gpu_layers=20,  
-        use_mlock=True 
-    )
-    return llm
+# Initialize LLM for ReAct agent
+llm = ChatOpenAI(
+    openai_api_key=OPENAI_API_KEY,
+    model_name="gpt-4-1106-preview",  # appropriate for ReAct / tool-calling
+    temperature=0,
+    max_tokens=1024
+)
 
-def generate_commands_with_llm(llm, ip_address, attack_scenario):
-    """Generate bash commands using the local LLM."""
-    prompt = f"""
+# Attack Prompt
+attack_prompt = ChatPromptTemplate.from_messages([
+    SystemMessage(content="""
+You are a cybersecurity expert specialized in Kali Linux scripting.
+You must ALWAYS generate a Bash script, even if the scenario is incomplete, broad, or unclear.
+If the task is too generic, just generate typical reconnaissance or attack commands related to the provided IP.
+NEVER apologize. NEVER explain. NEVER write anything other than Bash commands. NO markdown formatting. NO comments unless explicitly asked.
+Your output should be a list of valid Bash commands, one per line, that can be executed in a terminal.
+Replace any placeholder like $target_ip with the actual IP address provided in the input.
+"""),
+    HumanMessage(content="""
 ### Task:
-You are a cybersecurity expert tasked with generating Bash commands for a penetration testing scenario. Generate ONLY Bash commands that are executable on Kali Linux to simulate the specified attack scenario. The commands must be safe for use in a controlled, authorized testing environment.
+Generate ONLY valid Bash commands for penetration testing.
 
 ### Constraints:
-- Commands must be compatible with tools pre-installed on Kali Linux.
-- Ensure commands are syntactically correct and include necessary parameters.
-- Avoid commands that require external dependencies not typically found in Kali Linux.
-- Replace placeholders like $target_ip with the actual IP address provided in the input: {ip_address}.
-- Do NOT include any explanation, comments, or additional text.
-- Do NOT include markdown-style code blocks (e.g., ```bash).
-- Do NOT repeat commands or use the same command multiple times.
+- Use only tools pre-installed on Kali Linux.
+- No markdown, no explanations, no apologies.
+- Replace $target_ip with: {ip_address}
+- One Bash command per line, directly.
 
 ### Target:
 IP: {ip_address}
 Scenario: {attack_scenario}
+""")
+])
 
-### Output Format:
-Return only the Bash commands, one per line, with no explanations, comments, or markdown formatting. Ensure the actual IP address ({ip_address}) is used in the commands.
-
-### Script:
-"""
-
-    output = llm(
-        prompt,
-        max_tokens=512,
-        temperature=0.6,
-        top_p=0.9,
-    )
-    generated_text = output["choices"][0]["text"]
-
-    # Preprocess the output to remove markdown-style code blocks
-    if "```bash" in generated_text:
-        generated_text = generated_text.replace("```bash", "").replace("```", "")
-
-    # Split commands and strip whitespace
-    commands = [cmd.strip() for cmd in generated_text.strip().split("\n") if cmd.strip()]
-
-    # Post-process commands to replace placeholders like $target_ip with the actual IP address
-    processed_commands = []
-    for cmd in commands:
-        if "$target_ip" in cmd:
-            cmd = cmd.replace("$target_ip", ip_address)
-        processed_commands.append(cmd)
-
-    return processed_commands
-
-def validate_and_fix_commands(commands):
-    """Validate and fix commands for syntax errors."""
-    sanitized_commands = []
-    for cmd in commands:
-        # Fix unmatched quotes
-        if cmd.startswith('"') and not cmd.endswith('"'):
-            cmd += '"'
-        elif cmd.startswith("'") and not cmd.endswith("'"):
-            cmd += "'"
-        
-        # Discard incomplete commands
-        if cmd.count('"') % 2 != 0 or cmd.count("'") % 2 != 0:
-            print(f"Discarding invalid command due to unmatched quotes: {cmd}")
-            continue
-
-        # Discard commands that are too short or incomplete
-        if len(cmd.split()) < 2:  # At least two words (e.g., "nmap -sT")
-            print(f"Discarding incomplete command: {cmd}")
-            continue
-
-        sanitized_commands.append(cmd)
-    return sanitized_commands
-
-def remove_duplicate_commands(commands):
-    """Remove duplicate commands from the list."""
-    seen = set()
-    unique_commands = []
-    for cmd in commands:
-        if cmd not in seen:
-            seen.add(cmd)
-            unique_commands.append(cmd)
-    return unique_commands
-
-def generate_bash_script(ip_address, attack_scenario, llm):
-    """Generates a bash script for the specified attack."""
-    script_id = str(uuid.uuid4())
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    # Generate commands using the LLM
-    commands = generate_commands_with_llm(llm, ip_address, attack_scenario)
-
-    # Validate and fix commands
-    commands = validate_and_fix_commands(commands)
-    if not commands:
-        print("Error: No valid commands generated by the LLM. Please try again.")
-        return None
-
-    # Remove duplicate commands
-    commands = remove_duplicate_commands(commands)
-
-    # Print raw commands for debugging
-    print("\nRaw Commands Generated by LLM:")
-    for cmd in commands:
-        print(cmd)
-
-    # Build the script content
-    script_content = [
-        "#!/bin/bash",
-        f"# Generated Attack Script - ID: {script_id}",
-        f"# Target: {ip_address}",
-        f"# Scenario: {attack_scenario}",
-        f"# Generated on: {timestamp}",
-        "",
-        "echo 'Starting attack...'"
-    ]
-
-    # Add commands with error handling
-    for cmd in commands:
-        script_content.append(f"echo 'Executing: {cmd}'")
-        script_content.append(f"{cmd} || echo 'Command failed: {cmd}'")
-
-    script_content.extend([
-        "",
-        "echo 'Attack completed.'",
-        f"echo 'Results saved for {attack_scenario} on {ip_address}'"
-    ])
-
-    return "\n".join(script_content)
-
-def send_script_via_ssh(script_content, script_name):
-    """Send the bash script to the Kali Linux VM via SSH."""
+def generate_commands(ip_address: str, attack_scenario: str) -> str:
+    """Generate bash commands for a given IP and scenario."""
     try:
-        # Establish SSH connection
+        chain = attack_prompt | llm
+        response = chain.invoke({
+            "ip_address": ip_address,
+            "attack_scenario": attack_scenario
+        })
+        generated_text = response.content
+        # Replace placeholders with actual IP address
+        generated_text = generated_text.replace("{ip_address}", ip_address)
+        generated_text = generated_text.replace("$target_ip", ip_address)  # In case GPT uses $target_ip
+        return generated_text
+    except Exception as e:
+        return f"Error generating commands: {e}"
+
+def send_script_to_vm(script_content: str) -> str:
+    """Send the generated script to the Kali Linux VM via SSH and execute it."""
+    try:
+        script_id = str(uuid.uuid4())
+        script_name = f"attack_script_{script_id}.sh"
+        
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(KALI_VM_IP, username=KALI_VM_USER, password=KALI_VM_PASSWORD)
 
-        # Create directory if it doesn't exist
-        stdin, stdout, stderr = ssh.exec_command(f"mkdir -p {SCRIPT_DIR}")
-        stdout.read().decode()
+        # Create directory
+        ssh.exec_command(f"mkdir -p {SCRIPT_DIR}")
 
         # Upload the script
         sftp = ssh.open_sftp()
@@ -171,58 +88,73 @@ def send_script_via_ssh(script_content, script_name):
             remote_file.write(script_content)
         sftp.close()
 
-        # Make the script executable
+        # Make it executable
         ssh.exec_command(f"chmod +x {remote_path}")
 
-        print(f"Script '{script_name}' successfully sent to Kali VM at {remote_path}")
-
-        # Optionally execute the script on the VM
-        execute = input("Do you want to execute the script now? (y/n): ").strip().lower()
-        if execute == "y":
-            # Execute the script with sudo password handling
-            stdin, stdout, stderr = ssh.exec_command(f"echo '{KALI_VM_PASSWORD}' | sudo -S bash {remote_path}")
-            print(stdout.read().decode())
-            print(stderr.read().decode())
+        # Execute the script
+        stdin, stdout, stderr = ssh.exec_command(f"echo '{KALI_VM_PASSWORD}' | sudo -S bash {remote_path}")
+        execution_output = stdout.read().decode() + stderr.read().decode()
 
         ssh.close()
+
+        return f"Script executed successfully. Output:\n{execution_output}"
     except Exception as e:
-        print(f"Error during SSH operation: {e}")
+        return f"Error sending/executing script: {e}"
+
+# Define Tools
+tools = [
+    Tool(
+        name="Generate_Bash_Commands",
+        func=lambda inputs: generate_commands(
+            ip_address=inputs.split(",")[0].strip(),
+            attack_scenario=inputs.split(",")[1].strip()
+        ),
+        description="Generate Bash commands for a given IP address and attack scenario. Input format: '<IP_ADDRESS>, <SCENARIO>'"
+    ),
+    Tool(
+        name="Send_Script_to_Kali_VM",
+        func=send_script_to_vm,
+        description="Send a generated Bash script to the Kali Linux VM and execute it. Input: the full Bash script content."
+    )
+]
+
+# Initialize ReAct agent
+agent = initialize_agent(
+    tools=tools,
+    llm=llm,
+    agent=AgentType.OPENAI_FUNCTIONS,  # ReAct style agent with tool selection
+    verbose=True,
+)
 
 def main():
-    print("Loading Deepseek-Coder 6.7B model...")
-    llm = load_llm()
+    print("=== Penetration Testing Agent ===")
+    ip_address = input("Enter the target IP address: ")
+    scenario = input("Describe the attack scenario (e.g., 'port scan', 'service enumeration'): ")
 
-    while True:
-        ip_address = input("Enter the target IP address: ")
-        attack_scenario = input("Enter the attack scenario (e.g., port_scan, service_enumeration): ")
+    # Directly use the tool to generate Bash commands
+    user_request = f"{ip_address}, {scenario}"
 
-        # Generate the bash script
-        bash_script = generate_bash_script(ip_address, attack_scenario, llm)
-        if not bash_script:
-            retry = input("Failed to generate a valid bash script. Retry? (y/n): ").strip().lower()
-            if retry != "y":
-                print("Exiting.")
-                break
-            continue
+    bash_commands = tools[0].func(user_request)  # Directly calling Generate_Bash_Commands tool
+    print("\nGenerated Bash Commands:\n")
+    print(bash_commands)
 
-        # Print the generated script
-        print("\nGenerated Bash Script:\n")
-        print(bash_script)
+    send_now = input("\nDo you want to send and execute this script on the Kali VM? (y/n): ").strip().lower()
+    if send_now == "y":
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        full_script = f"""#!/bin/bash
+# Generated by agent
+# Time: {timestamp}
 
-        # Save script locally for reference
-        script_id = str(uuid.uuid4())
-        script_name = f"attack_script_{script_id}.sh"
-        with open(script_name, "w") as local_file:
-            local_file.write(bash_script)
+echo "Starting attack..."
 
-        print(f"Script saved locally as '{script_name}'.")
+{bash_commands}
 
-        # Send script to Kali Linux VM
-        send = input("Do you want to send this script to the Kali Linux VM? (y/n): ").strip().lower()
-        if send == "y":
-            send_script_via_ssh(bash_script, script_name)
-
-        break
+echo "Attack completed."
+"""
+        # Directly call the second tool to send the script
+        execution_result = tools[1].func(full_script)  # Directly calling Send_Script_to_Kali_VM tool
+        print("\nExecution Result:\n")
+        print(execution_result)
 
 if __name__ == "__main__":
     main()

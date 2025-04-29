@@ -1,80 +1,106 @@
 import paramiko
-from llama_cpp import Llama
+from langchain_openai import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
+from langchain.output_parsers import PydanticOutputParser
+from pydantic import BaseModel, Field
+from typing import List
+from dotenv import load_dotenv
 import re
+import os
+
+# Load environment variables
+load_dotenv()
+
+# Static configuration
+ATTACKED_VM_IP = "10.71.0.162"
+SUDO_PASSWORD = "root"
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+class MitigationAction(BaseModel):
+    commands: List[str] = Field(description="List of Linux commands to execute for mitigation")
+    description: str = Field(description="Brief description of the mitigation action")
 
 class MitigationAgent:
-    def __init__(self, vm_ip, model_path, sudo_password):
+    def __init__(self):
         # Initialize SSH connection to the attacked VM
-        self.vm_ip = vm_ip
-        self.sudo_password = sudo_password  # Store sudo password securely
         self.ssh_client = paramiko.SSHClient()
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
-            self.ssh_client.connect(self.vm_ip, username="anis", key_filename="/home/anis/.ssh/id_rsa")
-            print(f"SSH connection to {self.vm_ip} established successfully.")
+            self.ssh_client.connect(ATTACKED_VM_IP, username="anis", key_filename="/home/anis/.ssh/id_rsa")
+            print(f"[+] SSH connection to {ATTACKED_VM_IP} established successfully.")
         except Exception as e:
-            print(f"Error connecting to VM: {e}")
+            print(f"[-] Error connecting to VM: {e}")
             raise
 
-        # Load the LLM model
-        self.llm = self.load_llm(model_path)
+        if not OPENAI_API_KEY:
+            raise ValueError("OpenAI API Key not found. Please set OPENAI_API_KEY environment variable.")
 
-    def load_llm(self, model_path):
+        # Initialize LangChain with OpenAI
+        self.llm = ChatOpenAI(model="gpt-4o-mini", api_key=OPENAI_API_KEY)
+        self.parser = PydanticOutputParser(pydantic_object=MitigationAction)
+        self.prompt = self._create_prompt()
+
+    def _create_prompt(self):
         """
-        Load the GGUF model using llama-cpp-python.
+        Create a LangChain prompt for generating mitigation actions as Linux commands.
+        """
+        template = """
+        You are a cybersecurity assistant tasked with analyzing descriptions of security incidents on a Linux system running UFW (Uncomplicated Firewall) as the primary firewall manager.
+        Your goal is to propose a set of safe and effective Linux commands to mitigate the described incident.
+        The commands will be executed via SSH on a Linux VM. The agent will automatically handle 'sudo' authentication for commands requiring elevated privileges, so do NOT include 'sudo' or any password-related prefixes (e.g., 'echo "<password>" | sudo -S') in your commands.
+
+        Guidelines:
+        - For blocking IP addresses, use:
+          - 'ufw insert 1 deny from <IP>' to block all traffic from the IP.
+          - 'ufw insert 1 deny proto icmp from <IP>' to explicitly block ICMP traffic (e.g., pings).
+          - Always include 'ufw reload' after modifying UFW rules.
+        - If the incident description specifies an IPv6 address, use 'ufw insert 1 deny from <IPv6>' and 'ufw insert 1 deny proto icmp from <IPv6>' for IPv6 blocking.
+        - For other mitigations (e.g., killing a process, disabling a user, restarting a service), use appropriate Linux commands (e.g., 'kill -9 <PID>', 'usermod -L <user>', 'systemctl restart <service>').
+        - Do NOT include 'sudo' in the commands; the agent will add it as needed.
+        - Ensure commands are safe and avoid destructive actions (e.g., do not suggest 'rm -rf /', do not modify critical system files without clear justification).
+        - If the description is unclear or insufficient, return an empty list of commands and explain why in the description field.
+        - Provide a brief description of the proposed mitigation action.
+
+        Return the result in the following JSON format:
+        {format_instructions}
+
+        Input description: {input_description}
+        """
+        return ChatPromptTemplate.from_template(template).partial(format_instructions=self.parser.get_format_instructions())
+
+    def generate_action(self, incident_description: str) -> MitigationAction:
+        """
+        Generate a structured mitigation action with Linux commands from the incident description.
         """
         try:
-            llm = Llama(
-                model_path=model_path,
-                n_ctx=2048,      # Context size
-                n_threads=4,     # Number of CPU threads
-                n_gpu_layers=20, # Number of layers to offload to GPU (if applicable)
-                use_mlock=True   # Use memory locking to avoid swapping
-            )
-            print("LLM loaded successfully.")
-            return llm
+            chain = self.prompt | self.llm | self.parser
+            result = chain.invoke({"input_description": incident_description})
+            return result
         except Exception as e:
-            print(f"Error loading LLM: {e}")
-            return None
+            print(f"[-] Error generating action: {e}")
+            return MitigationAction(commands=[], description="Failed to generate mitigation action due to parsing error.")
 
-    def generate_response(self, action_description):
+    def validate_command(self, command: str) -> bool:
         """
-        Generate a response from the LLM, instructing it to extract only the IP address.
+        Validate that a command is safe to execute.
+        Returns True if safe, False if potentially dangerous.
         """
-        if not self.llm:
-            print("LLM is not loaded.")
-            return None
+        # Block dangerous patterns (e.g., recursive deletes, reboots, etc.)
+        dangerous_patterns = [
+            r"rm\s+-rf\s+/",  # Prevent 'rm -rf /'
+            r"reboot",        # Prevent system reboots
+            r"shutdown",      # Prevent system shutdowns
+            r"init\s+0",      # Prevent system halts
+            r"mkfs\.",        # Prevent filesystem formatting
+            r"dd\s+.*of=/dev/",  # Prevent disk wiping
+        ]
+        for pattern in dangerous_patterns:
+            if re.search(pattern, command, re.IGNORECASE):
+                print(f"[-] Command blocked for safety: {command}")
+                return False
+        return True
 
-        # Craft a prompt that instructs the LLM to return only the IP address
-        prompt = (
-            "You are a cybersecurity assistant. Given a mitigation action description, "
-            "extract and return only the IP address (in the format xxx.xxx.xxx.xxx) "
-            "without any additional text or explanation. If no IP address is found, return 'None'. "
-            "Example input: 'The mitigation action is to block IP 192.168.1.100.' "
-            "Example output: 192.168.1.100\n\n"
-            f"Input: {action_description}\nOutput:"
-        )
-
-        try:
-            response = self.llm(prompt, max_tokens=20, stop=["\n"])  # Limit tokens and stop at newline
-            ip_address = response["choices"][0]["text"].strip()
-            return ip_address if ip_address != "None" else None
-        except Exception as e:
-            print(f"Error generating response: {e}")
-            return None
-
-    def validate_ip_address(self, ip):
-        """
-        Validate that the extracted text is a valid IP address.
-        """
-        ip_pattern = r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$"
-        if not re.match(ip_pattern, ip):
-            return False
-        # Additional validation: ensure each octet is between 0 and 255
-        octets = ip.split('.')
-        return all(0 <= int(octet) <= 255 for octet in octets)
-
-    def confirm_action(self, message):
+    def confirm_action(self, message: str) -> bool:
         """
         Prompt the user to confirm an action.
         Returns True if the user confirms, False otherwise.
@@ -85,104 +111,85 @@ class MitigationAgent:
                 return True
             elif choice in ["no", "n"]:
                 return False
-            else:
-                print("Invalid input. Please enter 'yes' or 'no'.")
+            print("Invalid input. Please enter 'yes' or 'no'.")
 
-    def execute_mitigation_action(self, attacker_ip):
+    def execute_mitigation_action(self, action: MitigationAction):
         """
-        Execute mitigation actions to block the attacker's IP using ufw and iptables.
-        Optionally flush iptables and reset ufw to clear conflicting rules.
+        Execute the dynamically generated mitigation commands on the VM with sudo password.
         """
-        print(f"Blocking IP: {attacker_ip}")
-        safe_password = self.sudo_password.replace("'", "'\\''")
+        if not action.commands:
+            print(f"[-] No commands to execute: {action.description}")
+            return
 
-        # Ask user if they want to flush iptables and reset ufw
-        if self.confirm_action("Do you want to flush iptables and reset ufw to avoid conflicts? (Warning: This clears all firewall rules)"):
-            commands = [
-                f"echo '{safe_password}' | sudo -S iptables -F",  # Flush iptables
-                f"echo '{safe_password}' | sudo -S iptables -t nat -F",  # Flush NAT table
-                f"echo '{safe_password}' | sudo -S iptables -t mangle -F",  # Flush mangle table
-                f"echo '{safe_password}' | sudo -S sh -c 'echo y | ufw reset'",  # Reset ufw with confirmation
-                f"echo '{safe_password}' | sudo -S sh -c 'echo y | ufw enable'",  # Enable ufw with confirmation
-                f"echo '{safe_password}' | sudo -S ufw deny from {attacker_ip}",  # Block all traffic
-                f"echo '{safe_password}' | sudo -S iptables -A INPUT -p icmp -s {attacker_ip} -j DROP",  # Block ICMP via iptables
-                f"echo '{safe_password}' | sudo -S ufw logging on"  # Enable logging
-            ]
-        else:
-            commands = [
-                f"echo '{safe_password}' | sudo -S ufw reload",  # Reload ufw
-                f"echo '{safe_password}' | sudo -S sh -c 'echo y | ufw enable'",  # Enable ufw with confirmation
-                f"echo '{safe_password}' | sudo -S ufw deny from {attacker_ip}",  # Block all traffic
-                f"echo '{safe_password}' | sudo -S iptables -A INPUT -p icmp -s {attacker_ip} -j DROP",  # Block ICMP via iptables
-                f"echo '{safe_password}' | sudo -S ufw logging on"  # Enable logging
-            ]
+        print(f"[+] Proposed mitigation: {action.description}")
+        print("[*] Commands to execute:")
+        for cmd in action.commands:
+            print(f"  - {cmd}")
 
-        for command in commands:
-            print(f"Executing command: {command.replace(safe_password, '****')}")
+        if not self.confirm_action("Do you want to execute these commands?"):
+            print("[*] Mitigation action canceled.")
+            return
+
+        safe_password = SUDO_PASSWORD.replace("'", "'\\''")
+        for command in action.commands:
+            if not self.validate_command(command):
+                print(f"[-] Skipping unsafe command: {command}")
+                continue
+
+            # Prefix all commands with sudo and password
+            full_command = f"echo '{safe_password}' | sudo -S {command}"
+
+            print(f"[*] Executing command: {full_command.replace(safe_password, '****')}")
             try:
-                stdin, stdout, stderr = self.ssh_client.exec_command(command)
-                exit_status = stdout.channel.recv_exit_status()  # Get command exit status
+                stdin, stdout, stderr = self.ssh_client.exec_command(full_command)
+                exit_status = stdout.channel.recv_exit_status()
                 output = stdout.read().decode()
                 error = stderr.read().decode()
                 if exit_status != 0:
-                    print(f"Command failed with exit status {exit_status}: {error}")
-                    if "ufw enable" in command:
-                        raise RuntimeError("Failed to enable ufw; mitigation aborted to prevent insecure state")
+                    print(f"[-] Command failed with exit status {exit_status}: {error}")
                 else:
-                    print(f"Command executed successfully: {output or 'No output'}")
+                    print(f"[+] Command executed successfully: {output or 'No output'}")
             except Exception as e:
-                print(f"Error executing command: {e}")
-                if "ufw enable" in command:
-                    raise RuntimeError("Failed to enable ufw; mitigation aborted to prevent insecure state")
+                print(f"[-] Error executing command: {e}")
 
     def run(self):
+        """
+        Main loop to process incident descriptions and generate mitigation actions.
+        """
         try:
-            print(f"Connected to VM at {self.vm_ip}. Waiting for mitigation actions...")
+            print(f"[+] Connected to VM at {ATTACKED_VM_IP}. Waiting for incident descriptions...")
+            print("[*] Enter a description of the security incident (e.g., 'Suspicious traffic from 10.71.0.120' or 'Process 1234 is malicious').")
             while True:
-                # Step 1: Receive mitigation action description
-                action_description = input("Enter mitigation action description: ")
-
-                # Step 2: Confirm the action description
-                if not self.confirm_action("Do you want to proceed with analyzing this action?"):
-                    print("Action analysis canceled.")
+                incident_description = input("\nEnter incident description: ").strip()
+                if not incident_description:
+                    print("[-] Empty input. Please enter a valid description.")
                     continue
 
-                # Step 3: Generate LLM response (expecting only the IP address)
-                attacker_ip = self.generate_response(action_description)
-                if attacker_ip:
-                    print(f"Extracted IP to block: {attacker_ip}")
+                if not self.confirm_action("Do you want to proceed with analyzing this incident?"):
+                    print("[*] Incident analysis canceled.")
+                    continue
 
-                    # Step 4: Validate the IP address
-                    if not self.validate_ip_address(attacker_ip):
-                        print("Invalid IP address extracted. Action canceled.")
-                        continue
-
-                    # Step 5: Confirm the mitigation action
-                    if self.confirm_action(f"Do you want to block IP {attacker_ip}?"):
-                        # Step 6: Execute the mitigation action
-                        self.execute_mitigation_action(attacker_ip)
-                    else:
-                        print("Mitigation action canceled.")
+                action = self.generate_action(incident_description)
+                print(f"[+] Inferred mitigation: {action.description}")
+                if action.commands:
+                    print("[*] Proposed commands:")
+                    for cmd in action.commands:
+                        print(f"  - {cmd}")
                 else:
-                    print("Could not extract an IP address from the action description.")
+                    print("[-] No mitigation commands proposed.")
+
+                if action.commands and self.confirm_action("Do you want to execute these mitigation commands?"):
+                    self.execute_mitigation_action(action)
+                else:
+                    print("[*] Mitigation action skipped.")
         except KeyboardInterrupt:
-            print("Stopping mitigation agent...")
-        except RuntimeError as e:
-            print(f"Mitigation failed: {e}")
+            print("\n[!] Stopping mitigation agent...")
         finally:
             self.ssh_client.close()
 
 if __name__ == "__main__":
-    # Prompt for the attacked VM's IP address and sudo password
-    vm_ip = input("Enter the IP address of the attacked VM: ")
-    sudo_password = input("Enter the sudo password for the VM: ")
-
-    # Path to the GGUF model file
-    model_path = "/home/anis/PFE/models/llama-2-7b.Q4_K_M.gguf"
-
-    # Initialize and run the mitigation agent
     try:
-        agent = MitigationAgent(vm_ip, model_path, sudo_password)
+        agent = MitigationAgent()
         agent.run()
     except Exception as e:
-        print(f"Failed to initialize mitigation agent: {e}")
+        print(f"[!] Failed to initialize mitigation agent: {e}")

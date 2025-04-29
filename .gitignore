@@ -8,4 +8,3 @@ GeoLite2-City.mmdb
 agents/*.sh
 models/*gguf
 spark-jars/*.jar
-spark-scripts/.env

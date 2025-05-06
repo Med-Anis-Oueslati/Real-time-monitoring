@@ -8,3 +8,7 @@ GeoLite2-City.mmdb
 agents/*.sh
 models/*gguf
 spark-jars/*.jar
+spark-scripts/__pycache__/
+kafka-connect-plugins/
+agents/__pycache__/
+agents/*.log

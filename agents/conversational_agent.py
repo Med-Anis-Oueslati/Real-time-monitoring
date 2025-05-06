@@ -1,7 +1,7 @@
-import snowflake.connector
-import openai
-import os
+import os 
+from openai import OpenAI
 from dotenv import load_dotenv
+import snowflake.connector
 from langgraph.graph import StateGraph, END
 from typing import TypedDict, List, Optional
 
@@ -9,7 +9,7 @@ from typing import TypedDict, List, Optional
 load_dotenv()
 
 # Configure OpenAI API
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Schema description for the LOG_DATA table
 SCHEMA_DESCRIPTION = """
@@ -64,7 +64,9 @@ def get_sql_query_from_nlp(state: AgentState) -> AgentState:
     # Create a prompt with conversation context
     history_text = "\n".join([f"User: {msg['user']}\nSQL Query: {msg.get('sql', 'None')}" for msg in conversation_history])
     prompt = f"""
-You are an expert SQL query generator for a Snowflake database. Based on the following schema and conversation history, convert the user's natural language query into a valid SQL query. Consider the context from previous queries for follow-up questions. Return only the SQL query as a string.
+You are an expert SQL query generator for a Snowflake database.
+Based on the following schema and conversation history, convert the user's natural language query into a valid SQL query.
+Consider the context from previous queries for follow-up questions. Return only the SQL query as a string.
 Schema:
 {SCHEMA_DESCRIPTION}
 
@@ -75,7 +77,7 @@ User Query: {user_input}
 
 SQL Query:
 """
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4",
         messages=[
             {"role": "system", "content": "You are a SQL query generator. Provide only the SQL query."},
@@ -138,7 +140,7 @@ Results:
 
 Summary:
 """
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(  # Fixed: Removed incorrect .create
         model="gpt-4",
         messages=[
             {"role": "system", "content": "You are a data interpreter. Provide a concise summary of the query results."},
@@ -222,3 +224,26 @@ def process_query(user_input: str, conversation_history: List[dict]) -> dict:
         "output": final_state["output"],
         "conversation_history": final_state["conversation_history"]
     }
+
+def main():
+    """Main function to handle user interaction and query processing."""
+    conversation_history = []
+    print("Welcome to the Snowflake Query Agent! Type 'exit' to quit.")
+
+    while True:
+        user_input = input("\nEnter your query: ").strip()
+        if user_input.lower() == "exit":
+            print("Goodbye!")
+            break
+
+        result = process_query(user_input, conversation_history)
+        print("\nSQL Query:")
+        print(result["sql_query"])
+        print("\nResults:")
+        print(result["output"])
+
+        # Update conversation history
+        conversation_history = result["conversation_history"]
+
+if __name__ == "__main__":
+    main()

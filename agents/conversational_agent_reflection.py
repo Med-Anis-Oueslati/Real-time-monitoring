@@ -1,5 +1,5 @@
 import snowflake.connector
-import openai
+from openai import OpenAI
 import os
 from dotenv import load_dotenv
 from langgraph.graph import StateGraph, END
@@ -9,8 +9,7 @@ from typing import TypedDict, List, Optional
 load_dotenv()
 
 # Configure OpenAI API
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # Schema description for the LOG_DATA table
 SCHEMA_DESCRIPTION = """
 The Snowflake database contains one table:
@@ -78,14 +77,12 @@ User Query: {user_input}
 
 SQL Query:
 """
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "You are a SQL query generator. Provide only the SQL query."},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=200
-    )
+    response = client.chat.completions.create(model="gpt-4",
+    messages=[
+        {"role": "system", "content": "You are a SQL query generator. Provide only the SQL query."},
+        {"role": "user", "content": prompt}
+    ],
+    max_tokens=200)
     sql_query = response.choices[0].message.content.strip()
 
     # Remove any Markdown-style backticks (`sql`) from the query
@@ -140,14 +137,12 @@ Results: {result_summary}
 
 Feedback and Refined Query (if needed, otherwise return 'No refinement needed'):
 """
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "You are a SQL query reviewer. Provide feedback and, if needed, a refined SQL query."},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=300
-    )
+    response = client.chat.completions.create(model="gpt-4",
+    messages=[
+        {"role": "system", "content": "You are a SQL query reviewer. Provide feedback and, if needed, a refined SQL query."},
+        {"role": "user", "content": prompt}
+    ],
+    max_tokens=300)
     reflection_feedback = response.choices[0].message.content.strip()
 
     # Extract refined query if provided
@@ -192,14 +187,12 @@ Results:
 
 Summary:
 """
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "You are a data interpreter. Provide a concise summary of the query results."},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=200
-    )
+    response = client.chat.completions.create(model="gpt-4",
+    messages=[
+        {"role": "system", "content": "You are a data interpreter. Provide a concise summary of the query results."},
+        {"role": "user", "content": prompt}
+    ],
+    max_tokens=200)
     natural_language_response = response.choices[0].message.content.strip()
     state["output"] = natural_language_response
     return state

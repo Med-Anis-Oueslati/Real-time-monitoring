@@ -1,7 +1,7 @@
 import os
 import sys
 import snowflake.connector
-import openai
+from openai import OpenAI
 from dotenv import load_dotenv
 import pkg_resources
 import requests
@@ -150,14 +150,19 @@ def check_warehouse_status(conn: snowflake.connector.SnowflakeConnection) -> Non
 def test_openai_api() -> None:
     """Test Open AI API connectivity."""
     print("\n=== Open AI API Test ===")
+    # Retrieve API key from environment variable
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    
     if not OPENAI_API_KEY:
         print("ERROR: OPENAI_API_KEY is not set")
         return
     
-    openai.api_key = OPENAI_API_KEY
+    # Initialize the OpenAI client
+    client = OpenAI(api_key=OPENAI_API_KEY)
+    
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
+        response = client.chat.completions.create(
+            model="gpt-4o",  # Updated model (gpt-4 may not be available; use gpt-4o or gpt-3.5-turbo)
             messages=[{"role": "user", "content": "Test"}],
             max_tokens=10
         )

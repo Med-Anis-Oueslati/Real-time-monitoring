@@ -29,7 +29,7 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://192.168.1.111:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://10.71.0.35:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_MESSAGE_MAX_BYTES: 0485760  # 10MB
       KAFKA_DELETE_TOPIC_ENABLE: "true"
@@ -165,6 +165,9 @@ services:
       - ./spark-jars/jackson-core-2.15.2.jar:/opt/spark/jars/jackson-core-2.15.2.jar
       - ./spark-jars/jackson-databind-2.15.2.jar:/opt/spark/jars/jackson-databind-2.15.2.jar
       - ./spark-jars/jackson-annotations-2.15.2.jar:/opt/spark/jars/jackson-annotations-2.15.2.jar
+      - ./spark-jars/parquet-avro-1.12.3.jar:/opt/spark/jars/parquet-avro-1.12.3.jar
+      - ./spark-jars/parquet-hadoop-1.12.3.jar:/opt/spark/jars/parquet-hadoop-1.12.3.jar
+      - ./spark-jars/avro-1.11.3.jar:/opt/spark/jars/avro-1.11.3.jar
       - ./spark-logs:/opt/spark/logs
       - ./spark-conf/log4j.properties:/opt/spark/conf/log4j.properties
       - ./GeoLite2-City.mmdb:/opt/spark/GeoLite2-City.mmdb
@@ -195,6 +198,9 @@ services:
       - ./spark-jars/jackson-core-2.15.2.jar:/opt/spark/jars/jackson-core-2.15.2.jar
       - ./spark-jars/jackson-databind-2.15.2.jar:/opt/spark/jars/jackson-databind-2.15.2.jar
       - ./spark-jars/jackson-annotations-2.15.2.jar:/opt/spark/jars/jackson-annotations-2.15.2.jar
+      - ./spark-jars/parquet-avro-1.12.3.jar:/opt/spark/jars/parquet-avro-1.12.3.jar
+      - ./spark-jars/parquet-hadoop-1.12.3.jar:/opt/spark/jars/parquet-hadoop-1.12.3.jar
+      - ./spark-jars/avro-1.11.3.jar:/opt/spark/jars/avro-1.11.3.jar
       - ./spark-logs:/opt/spark/logs
       - ./spark-conf/log4j.properties:/opt/spark/conf/log4j.properties
       - ./GeoLite2-City.mmdb:/opt/spark/GeoLite2-City.mmdb

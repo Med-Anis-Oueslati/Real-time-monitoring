@@ -1,3 +1,0 @@
-timestamp,hostname,process,pid,event_type,severity,message,log_source,processed_at
-2025-04-07T12:30:01.150+01:00,anis-virtualbox,CRON,1836,session_close,low,pam_unix(cron:session): session closed for user root,system,2025-04-07T14:18:42.282+01:00
-2025-04-07T12:35:01.161+01:00,anis-virtualbox,CRON,1909,session_open,low,pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0),system,2025-04-07T14:18:42.282+01:00

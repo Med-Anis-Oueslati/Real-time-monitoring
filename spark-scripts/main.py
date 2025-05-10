@@ -1,94 +1,141 @@
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, udf
-from pyspark.sql.types import StructType, StructField, StringType, TimestampType
-import importlib
+import subprocess
+import logging
+import os
+from concurrent.futures import ThreadPoolExecutor
+from typing import List
+import psutil
+import time
 
-# Initialize Spark session
-spark = SparkSession.builder \
-    .appName("LogTransformationPipeline") \
-    .master("spark://spark:7077") \
-    .config("spark.sql.shuffle.partitions", "4") \
-    .config("spark.streaming.stopGracefullyOnShutdown", "true") \
-    .getOrCreate()
+# Initialize logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
-# Define all Kafka topics /// no kali
-topics = "lubuntu_auth"
+# List of transformation scripts
+TRANSFORM_SCRIPTS = [
+    "zeek_capture_loss_transform.py",
+    "zeek_conn_transform.py",
+    "zeek_dns_transform.py",
+    "zeek_http_transform.py",
+    "zeek_notice_transform.py",
+    "zeek_ssl_transform.py"
+]
 
-# Unified schema for all transformed logs
-schema = StructType([
-    StructField("timestamp", TimestampType(), True),
-    StructField("hostname", StringType(), True),
-    StructField("process", StringType(), True),
-    StructField("pid", StringType(), True),
-    StructField("event_type", StringType(), True),
-    StructField("severity", StringType(), True),
-    StructField("message", StringType(), True),
-    StructField("log_source", StringType(), True),
-    StructField("processed_at", TimestampType(), True)
-])
+# Spark master URL
+SPARK_MASTER = "spark://spark:7077"
 
-# Read from Kafka
-kafka_df = spark \
-    .readStream \
-    .format("kafka") \
-    .option("kafka.bootstrap.servers", "kafka:9092") \
-    .option("subscribe", topics) \
-    .option("startingOffsets", "latest") \
-    .option("failOnDataLoss", "false") \
-    .load()
+# Path to spark-submit
+SPARK_SUBMIT = "/opt/bitnami/spark/bin/spark-submit"
 
-# Extract raw log and topic
-raw_df = kafka_df.select(
-    col("value").cast("string").alias("raw_log"),
-    col("topic").alias("log_source")
-)
+# JAR dependencies
+JARS = [
+    "/opt/spark/jars/spark-sql-kafka-0-10_2.12-3.5.0.jar",
+    "/opt/spark/jars/kafka-clients-3.4.1.jar",
+    "/opt/spark/jars/spark-streaming_2.12-3.5.0.jar",
+    "/opt/spark/jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar",
+    "/opt/spark/jars/commons-pool2-2.11.1.jar",
+    "/opt/spark/jars/snowflake-jdbc-3.23.2.jar",
+    "/opt/spark/jars/spark-snowflake_2.12-3.1.1.jar",
+    "/opt/spark/jars/jackson-databind-2.15.2.jar",
+    "/opt/spark/jars/jackson-core-2.15.2.jar",
+    "/opt/spark/jars/jackson-annotations-2.15.2.jar",
+    "/opt/spark/jars/parquet-avro-1.12.3.jar",
+    "/opt/spark/jars/parquet-hadoop-1.12.3.jar",
+    "/opt/spark/jars/avro-1.11.3.jar"
+]
 
-# Function to dynamically call transformation modules based on topic /// no kali
-def transform_log(log_source, raw_log):
-    # Map topics to transformation modules
-    topic_to_module = {
-        
-        "lubuntu_auth": "transform_auth",
-    }
+def check_system_resources() -> bool:
+    """
+    Checks available system resources (CPU and memory) to ensure safe job submission.
     
-    # Default to transform_syslog if topic is unrecognized
-    module_name = topic_to_module.get(log_source, "transform_syslog")
+    Returns:
+        bool: True if resources are sufficient, False otherwise.
+    """
     try:
-        module = importlib.import_module(module_name)
-        return module.transform(raw_log, log_source)
+        cpu_usage = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory()
+        available_memory = memory.available / (1024 ** 3)  # Convert to GB
+        
+        logger.info(f"CPU Usage: {cpu_usage}% | Available Memory: {available_memory:.2f} GB")
+        
+        # Thresholds: Less than 80% CPU usage and at least 1 GB free memory
+        if cpu_usage > 80 or available_memory < 1:
+            logger.warning("Insufficient system resources to submit more jobs")
+            return False
+        return True
     except Exception as e:
-        # Return a fallback row in case of transformation failure
-        return (None, None, None, None, "error", "high", f"Transformation failed: {str(e)}", log_source, None)
+        logger.error(f"Error checking system resources: {str(e)}")
+        return False
 
-# Register UDF
-transform_udf = udf(transform_log, schema)
+def submit_spark_job(script: str) -> None:
+    """
+    Submits a single Spark job for the given script using spark-submit.
+    
+    Args:
+        script (str): Name of the Python script to run.
+    """
+    try:
+        if not check_system_resources():
+            logger.error(f"Skipping {script} due to insufficient resources")
+            return
+            
+        script_path = f"/spark-scripts/{script}"
+        if not os.path.exists(script_path):
+            logger.error(f"Script {script} not found at {script_path}")
+            return
 
-# Apply transformations
-transformed_df = raw_df.select(
-    transform_udf(col("log_source"), col("raw_log")).alias("structured_log")
-).select(
-    col("structured_log.timestamp"),
-    col("structured_log.hostname"),
-    col("structured_log.process"),
-    col("structured_log.pid"),
-    col("structured_log.event_type"),
-    col("structured_log.severity"),
-    col("structured_log.message"),
-    col("structured_log.log_source"),
-    col("structured_log.processed_at")
-).filter(
-    # Filter out low-severity noise across all logs
-    col("severity").isin("high", "medium")
-)
+        command = [
+            SPARK_SUBMIT,
+            "--master", SPARK_MASTER,
+            "--deploy-mode", "client",
+            "--driver-memory", "1g",  # Updated to match transformation script
+            "--executor-memory", "1g",  # Updated to match transformation script
+            "--executor-cores", "2",  # Updated to match transformation script
+            "--jars", ",".join(JARS),
+            "--conf", "spark.driver.extraJavaOptions=-Dlog4j.configuration=file:/opt/spark/conf/log4j.properties",
+            "--conf", "spark.dynamicAllocation.enabled=false",  # Updated to match transformation script
+            "--conf", "spark.executor.instances=1",  # Updated to match transformation script
+            "--conf", "spark.shuffle.service.enabled=false",  # Simplified for fixed executors
+            "--conf", "spark.sql.shuffle.partitions=4",  # Consistent with transformation script
+            script_path
+        ]
+        
+        logger.info(f"Submitting Spark job for {script}")
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True
+        )
+        
+        stdout, stderr = process.communicate()
+        
+        if process.returncode == 0:
+            logger.info(f"Successfully submitted {script}")
+            logger.debug(f"Output for {script}:\n{stdout}")
+        else:
+            logger.error(f"Failed to submit {script}. Return code: {process.returncode}")
+            logger.error(f"Error output:\n{stderr}")
+            
+    except Exception as e:
+        logger.error(f"Exception while submitting {script}: {str(e)}")
 
-# Write to console for testing
-query = transformed_df \
-    .writeStream \
-    .format("console") \
-    .outputMode("append") \
-    .trigger(processingTime="10 seconds") \
-    .option("checkpointLocation", "/tmp/spark-checkpoint") \
-    .start()
+def run_all_transforms(scripts: List[str]) -> None:
+    """
+    Runs all transformation scripts concurrently using ThreadPoolExecutor.
+    
+    Args:
+        scripts (List[str]): List of script names to run.
+    """
+    logger.info("Starting submission of all Zeek transformation scripts")
+    
+    # Limit concurrency to avoid resource contention
+    with ThreadPoolExecutor(max_workers=2) as executor:  # Reduced to 2 concurrent jobs
+        executor.map(submit_spark_job, scripts)
+    
+    logger.info("All transformation scripts have been submitted")
 
-# Keep the stream running
-query.awaitTermination()
+if __name__ == "__main__":
+    try:
+        run_all_transforms(TRANSFORM_SCRIPTS)
+    except Exception as e:
+        logger.error(f"Failed to run transformations: {str(e)}")

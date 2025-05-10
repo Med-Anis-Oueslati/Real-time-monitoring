@@ -29,7 +29,7 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://10.71.0.35:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://172.20.10.2:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_MESSAGE_MAX_BYTES: 0485760  # 10MB
       KAFKA_DELETE_TOPIC_ENABLE: "true"
@@ -155,19 +155,7 @@ services:
     command: bash -c "/opt/bitnami/spark/bin/spark-class org.apache.spark.deploy.master.Master"
     volumes:
       - ./spark-scripts:/spark-scripts
-      - ./spark-jars/spark-sql-kafka-0-10_2.12-3.5.0.jar:/opt/spark/jars/spark-sql-kafka-0-10_2.12-3.5.0.jar
-      - ./spark-jars/kafka-clients-3.4.1.jar:/opt/spark/jars/kafka-clients-3.4.1.jar
-      - ./spark-jars/snowflake-jdbc-3.23.2.jar:/opt/spark/jars/snowflake-jdbc-3.23.2.jar
-      - ./spark-jars/spark-snowflake_2.12-3.1.1.jar:/opt/spark/jars/spark-snowflake_2.12-3.1.1.jar
-      - ./spark-jars/spark-streaming_2.12-3.5.0.jar:/opt/spark/jars/spark-streaming_2.12-3.5.0.jar
-      - ./spark-jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar:/opt/spark/jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar
-      - ./spark-jars/commons-pool2-2.11.1.jar:/opt/spark/jars/commons-pool2-2.11.1.jar
-      - ./spark-jars/jackson-core-2.15.2.jar:/opt/spark/jars/jackson-core-2.15.2.jar
-      - ./spark-jars/jackson-databind-2.15.2.jar:/opt/spark/jars/jackson-databind-2.15.2.jar
-      - ./spark-jars/jackson-annotations-2.15.2.jar:/opt/spark/jars/jackson-annotations-2.15.2.jar
-      - ./spark-jars/parquet-avro-1.12.3.jar:/opt/spark/jars/parquet-avro-1.12.3.jar
-      - ./spark-jars/parquet-hadoop-1.12.3.jar:/opt/spark/jars/parquet-hadoop-1.12.3.jar
-      - ./spark-jars/avro-1.11.3.jar:/opt/spark/jars/avro-1.11.3.jar
+      - ./spark-jars:/opt/spark/jars
       - ./spark-logs:/opt/spark/logs
       - ./spark-conf/log4j.properties:/opt/spark/conf/log4j.properties
       - ./GeoLite2-City.mmdb:/opt/spark/GeoLite2-City.mmdb
@@ -182,25 +170,13 @@ services:
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark:7077
-      - SPARK_WORKER_CORES=4
-      - SPARK_WORKER_MEMORY=4g
+      - SPARK_WORKER_CORES=12
+      - SPARK_WORKER_MEMORY=3584m
     networks:
       - fluentkafka
     volumes:
       - ./spark-scripts:/spark-scripts
-      - ./spark-jars/spark-sql-kafka-0-10_2.12-3.5.0.jar:/opt/spark/jars/spark-sql-kafka-0-10_2.12-3.5.0.jar
-      - ./spark-jars/kafka-clients-3.4.1.jar:/opt/spark/jars/kafka-clients-3.4.1.jar
-      - ./spark-jars/snowflake-jdbc-3.23.2.jar:/opt/spark/jars/snowflake-jdbc-3.23.2.jar
-      - ./spark-jars/spark-snowflake_2.12-3.1.1.jar:/opt/spark/jars/spark-snowflake_2.12-3.1.1.jar
-      - ./spark-jars/spark-streaming_2.12-3.5.0.jar:/opt/spark/jars/spark-streaming_2.12-3.5.0.jar
-      - ./spark-jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar:/opt/spark/jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar
-      - ./spark-jars/commons-pool2-2.11.1.jar:/opt/spark/jars/commons-pool2-2.11.1.jar
-      - ./spark-jars/jackson-core-2.15.2.jar:/opt/spark/jars/jackson-core-2.15.2.jar
-      - ./spark-jars/jackson-databind-2.15.2.jar:/opt/spark/jars/jackson-databind-2.15.2.jar
-      - ./spark-jars/jackson-annotations-2.15.2.jar:/opt/spark/jars/jackson-annotations-2.15.2.jar
-      - ./spark-jars/parquet-avro-1.12.3.jar:/opt/spark/jars/parquet-avro-1.12.3.jar
-      - ./spark-jars/parquet-hadoop-1.12.3.jar:/opt/spark/jars/parquet-hadoop-1.12.3.jar
-      - ./spark-jars/avro-1.11.3.jar:/opt/spark/jars/avro-1.11.3.jar
+      - ./spark-jars:/opt/spark/jars
       - ./spark-logs:/opt/spark/logs
       - ./spark-conf/log4j.properties:/opt/spark/conf/log4j.properties
       - ./GeoLite2-City.mmdb:/opt/spark/GeoLite2-City.mmdb

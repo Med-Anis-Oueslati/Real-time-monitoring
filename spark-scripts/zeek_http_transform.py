@@ -1,6 +1,6 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, from_json, to_timestamp, year, month, dayofmonth, hour, minute, second, from_unixtime
-from pyspark.sql.types import StructType, StructField, StringType, DoubleType, IntegerType, BooleanType, ArrayType, FloatType
+from pyspark.sql.types import StructType, StructField, StringType, DoubleType, IntegerType, BooleanType, ArrayType
 import logging
 import os
 from dotenv import load_dotenv
@@ -28,34 +28,36 @@ spark_jars = [
     "/opt/spark/jars/parquet-hadoop-1.12.3.jar",
     "/opt/spark/jars/avro-1.11.3.jar"
 ]
-
 spark = SparkSession.builder \
-    .appName("ZeekNoticeProcessing") \
-    .config("spark.executor.memory", "4g") \
-    .config("spark.executor.cores", "4") \
-    .config("spark.driver.memory", "4g") \
-    .config("spark.kafka.consumer.pollTimeoutMs", "60000") \
-    .config("spark.streaming.stopGracefullyOnShutdown", "true") \
-    .config("spark.dynamicAllocation.enabled", "false") \
-    .config("spark.jars", ",".join(spark_jars)) \
+    .appName("ZeekHTTPToSnowflake") \
+    .config("spark.dynamicAllocation.enabled", "true") \
+    .config("spark.ui.port", "4053") \
     .getOrCreate()
-# Define schema for zeek_notice JSON
-notice_schema = StructType([
+
+
+# Define schema for zeek_http JSON
+http_schema = StructType([
     StructField("ts", DoubleType(), True),
     StructField("uid", StringType(), True),
     StructField("id.orig_h", StringType(), True),
     StructField("id.orig_p", IntegerType(), True),
     StructField("id.resp_h", StringType(), True),
     StructField("id.resp_p", IntegerType(), True),
-    StructField("proto", StringType(), True),
-    StructField("note", StringType(), True),
-    StructField("msg", StringType(), True),
-    StructField("src", StringType(), True),
-    StructField("dst", StringType(), True),
-    StructField("p", IntegerType(), True),
-    StructField("actions", ArrayType(StringType()), True),
-    StructField("email_dest", ArrayType(StringType()), True),
-    StructField("suppress_for", FloatType(), True),
+    StructField("trans_depth", IntegerType(), True),
+    StructField("method", StringType(), True),
+    StructField("host", StringType(), True),
+    StructField("uri", StringType(), True),
+    StructField("version", StringType(), True),
+    StructField("user_agent", StringType(), True),
+    StructField("request_body_len", IntegerType(), True),
+    StructField("response_body_len", IntegerType(), True),
+    StructField("status_code", IntegerType(), True),
+    StructField("status_msg", StringType(), True),
+    StructField("tags", ArrayType(StringType()), True),
+    StructField("resp_fuids", ArrayType(StringType()), True),
+    StructField("orig_fuids", ArrayType(StringType()), True),
+    StructField("orig_mime_types", ArrayType(StringType()), True),
+    StructField("resp_mime_types", ArrayType(StringType()), True),
     StructField("hostname", StringType(), True),
     StructField("vm_id", StringType(), True)
 ])
@@ -65,18 +67,20 @@ kafka_df = spark \
     .readStream \
     .format("kafka") \
     .option("kafka.bootstrap.servers", "kafka:9092") \
-    .option("subscribe", "zeek_notice") \
+    .option("subscribe", "zeek_http") \
     .option("startingOffsets", "latest") \
-    .option("kafka.group.id", "zeek_notice_group") \
+    .option("kafka.group.id", "zeek_http_group") \
     .option("kafka.session.timeout.ms", "10000") \
     .option("kafka.heartbeat.interval.ms", "3000") \
     .option("kafka.max.poll.records", "500") \
     .load()
 
+
 # Parse Kafka message
 parsed_df = kafka_df.select(
-    from_json(col("value").cast("string"), notice_schema).alias("data")
+    from_json(col("value").cast("string"), http_schema).alias("data")
 ).select("data.*")
+
 
 # Transform ts to timestamp and decompose
 enriched_df = parsed_df \
@@ -87,8 +91,6 @@ enriched_df = parsed_df \
     .withColumn("hour", hour(col("timestamp"))) \
     .withColumn("minute", minute(col("timestamp"))) \
     .withColumn("second", second(col("timestamp")))
-
-
 
 # Select relevant columns
 final_df = enriched_df.select(
@@ -104,18 +106,25 @@ final_df = enriched_df.select(
     col("`id.orig_p`").alias("id_orig_p"),
     col("`id.resp_h`").alias("id_resp_h"),
     col("`id.resp_p`").alias("id_resp_p"),
-    col("proto"),
-    col("note"),
-    col("msg"),
-    col("src"),
-    col("dst"),
-    col("p"),
-    col("actions"),
-    col("email_dest"),
-    col("suppress_for"),
+    col("trans_depth"),
+    col("method"),
+    col("host"),
+    col("uri"),
+    col("version"),
+    col("user_agent"),
+    col("request_body_len"),
+    col("response_body_len"),
+    col("status_code"),
+    col("status_msg"),
+    col("tags"),
+    col("resp_fuids"),
+    col("orig_fuids"),
+    col("orig_mime_types"),
+    col("resp_mime_types"),
     col("hostname"),
     col("vm_id")
 )
+
 
 
 # Snowflake connection options
@@ -127,8 +136,7 @@ snowflake_options = {
     "sfDatabase": os.getenv("SNOWFLAKE_DATABASE"),
     "sfSchema": os.getenv("SNOWFLAKE_SCHEMA"),
     "sfWarehouse": os.getenv("SNOWFLAKE_WAREHOUSE"),
-    "sfRole": os.getenv("SNOWFLAKE_ROLE"),
-    "dbtable": "ZEEK_Notice"
+    "sfRole": os.getenv("SNOWFLAKE_ROLE")
 }
 
 # Write to Snowflake and console
@@ -142,7 +150,7 @@ def write_to_snowflake(batch_df, batch_id):
             batch_df.write \
                 .format("snowflake") \
                 .options(**snowflake_options) \
-                .option("dbtable", "ZEEK_NOTICE") \
+                .option("dbtable", "ZEEK_HTTP") \
                 .option("sfOnError", "CONTINUE") \
                 .mode("append") \
                 .save()

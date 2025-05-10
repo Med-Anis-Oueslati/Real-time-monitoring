@@ -1,3 +1,0 @@
-timestamp,hostname,process,pid,event_type,severity,message,log_source,processed_at
-2025-04-07T12:36:54.388+01:00,anis-virtualbox,dbus-daemon,804,error,high,[system] Failed to activate service 'org.bluez': timed out (service_start_timeout=25000ms),system,2025-04-07T14:18:42.282+01:00
-2025-04-07T12:36:56.593+01:00,anis-virtualbox,sudo,"",sudo_command,medium,anis : TTY=pts/2 ; PWD=/home/anis ; USER=root ; COMMAND=/usr/bin/su,system,2025-04-07T14:18:42.282+01:00

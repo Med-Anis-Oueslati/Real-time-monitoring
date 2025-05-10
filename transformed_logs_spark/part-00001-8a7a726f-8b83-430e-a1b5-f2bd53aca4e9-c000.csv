@@ -1,3 +1,0 @@
-timestamp,hostname,process,pid,event_type,severity,message,log_source,processed_at
-2025-04-07T12:21:07.779+01:00,anis-virtualbox,sddm-helper,"",auth_misc,info,gkr-pam: unlocked login keyring,system,2025-04-07T14:18:42.282+01:00
-2025-04-07T12:21:09.340+01:00,anis-virtualbox,polkitd,826,auth_misc,info,"Registered Authentication Agent for unix-session:3 (system bus name :1.51 [/usr/bin/lxqt-policykit-agent], object path /org/lxqt/PolicyKit1/AuthenticationAgent, locale en_US.UTF-8)",system,2025-04-07T14:18:42.282+01:00

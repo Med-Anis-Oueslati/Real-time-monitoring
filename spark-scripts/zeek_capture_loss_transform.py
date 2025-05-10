@@ -19,18 +19,17 @@ spark_jars = [
     "/opt/spark/jars/spark-snowflake_2.12-3.1.1.jar",
     "/opt/spark/jars/jackson-databind-2.15.2.jar",
     "/opt/spark/jars/jackson-core-2.15.2.jar",
-    "/opt/spark/jars/jackson-annotations-2.15.2.jar"
+    "/opt/spark/jars/jackson-annotations-2.15.2.jar",
+    "/opt/spark/jars/parquet-avro-1.12.3.jar",
+    "/opt/spark/jars/parquet-hadoop-1.12.3.jar",
+    "/opt/spark/jars/avro-1.11.3.jar"
 ]
 spark = SparkSession.builder \
-    .appName("ZeekCaptureLossProcessing") \
-    .config("spark.executor.memory", "4g") \
-    .config("spark.executor.cores", "4") \
-    .config("spark.driver.memory", "4g") \
-    .config("spark.kafka.consumer.pollTimeoutMs", "60000") \
-    .config("spark.streaming.stopGracefullyOnShutdown", "true") \
-    .config("spark.dynamicAllocation.enabled", "false") \
-    .config("spark.jars", ",".join(spark_jars)) \
+    .appName("ZeekCaptureLossToSnowflake") \
+    .config("spark.dynamicAllocation.enabled", "true") \
+    .config("spark.ui.port", "4050") \
     .getOrCreate()
+
 
 # Define schema for zeek_capture_loss JSON
 capture_loss_schema = StructType([

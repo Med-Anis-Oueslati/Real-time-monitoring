@@ -4,7 +4,11 @@ FROM bitnami/spark:3.5.0
 USER root
 
 # Install Python dependencies
-RUN pip install pyspark kafka-python geoip2 python-dotenv
-
+RUN pip install --no-cache-dir \
+    pyspark==3.5.0 \
+    kafka-python==2.0.2 \
+    geoip2==4.8.0 \
+    python-dotenv==1.0.1 \
+    psutil==6.0.0
 # Switch back to non-root user
 USER 1001

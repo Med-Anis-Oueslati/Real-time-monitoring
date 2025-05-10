@@ -2,6 +2,8 @@ hadoop_datanode2/
 hadoop_namenode/
 postgres_data/
 hadoop_datanode1/
+hdfs_data/
+grafana_data/
 .venv/
 GeoLite2-City.mmdb
 .env
@@ -12,3 +14,4 @@ spark-scripts/__pycache__/
 kafka-connect-plugins/
 agents/__pycache__/
 agents/*.log
+pgadmin_data/

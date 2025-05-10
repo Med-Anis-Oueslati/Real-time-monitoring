@@ -1,4 +1,0 @@
-timestamp,hostname,process,pid,event_type,severity,message,log_source,processed_at
-2025-04-07T12:36:56.604+01:00,anis-virtualbox,su,1974,session_open,medium,pam_unix(su:session): session opened for user root(uid=0) by anis(uid=0),system,2025-04-07T14:18:42.282+01:00
-2025-04-07T12:36:58.170+01:00,anis-virtualbox,su,1974,session_close,medium,pam_unix(su:session): session closed for user root,system,2025-04-07T14:18:42.282+01:00
-2025-04-07T12:36:58.175+01:00,anis-virtualbox,sudo,"",session_close,low,pam_unix(sudo:session): session closed for user root,system,2025-04-07T14:18:42.282+01:00

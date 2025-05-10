@@ -28,14 +28,11 @@ spark_jars = [
     "/opt/spark/jars/avro-1.11.3.jar"
 ]
 spark = SparkSession.builder \
-    .appName("ZeekSSLProcessing") \
-    .config("spark.executor.memory", "4g") \
-    .config("spark.executor.cores", "4") \
-    .config("spark.driver.memory", "4g") \
-    .config("spark.kafka.consumer.pollTimeoutMs", "60000") \
-    .config("spark.streaming.stopGracefullyOnShutdown", "true") \
-    .config("spark.dynamicAllocation.enabled", "false") \
+    .appName("ZeekSSLToSnowflake") \
+    .config("spark.dynamicAllocation.enabled", "true") \
+    .config("spark.ui.port", "4055") \
     .getOrCreate()
+
 # Define schema for zeek_ssl JSON
 ssl_schema = StructType([
     StructField("ts", DoubleType(), True),

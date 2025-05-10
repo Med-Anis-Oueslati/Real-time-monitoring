@@ -1,0 +1,4 @@
+DIR: /opt/hadoop/etc/hadoop
+yarn_nodemanager_resource_memory_mb: 2048
+yarn_resourcemanager_hostname: resourcemanager
+yarn_nodemanager_resource_cpu_vcores: 1

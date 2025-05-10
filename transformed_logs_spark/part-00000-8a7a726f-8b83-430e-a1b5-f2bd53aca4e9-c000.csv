@@ -1,3 +1,0 @@
-timestamp,hostname,process,pid,event_type,severity,message,log_source,processed_at
-2025-04-07T12:21:07.533+01:00,anis-virtualbox,systemd-logind,841,logind_event,info,Session 1 logged out. Waiting for processes to exit.,system,2025-04-07T14:18:42.282+01:00
-2025-04-07T12:21:07.536+01:00,anis-virtualbox,systemd-logind,841,logind_event,info,Removed session 1.,system,2025-04-07T14:18:42.282+01:00

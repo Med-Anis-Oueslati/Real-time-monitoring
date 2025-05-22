@@ -164,4 +164,12 @@ The Snowflake database contains the following tables in SPARK_DB.SPARK_SCHEMA:
    - HOSTNAME (STRING): Hostname of the system
    - VM_ID (STRING): Virtual machine identifier
    - Clustering: YEAR, MONTH, DAY
+
+7. Anomalies
+   - TIMESTAMP (TIMESTAMP_NTZ): Timestamp of the anomaly
+   - ID_ORIG_H (STRING): Source IP address
+   - VM_ID (STRING): Virtual machine identifier
+   - ANOMALY_TYPE (STRING): Type of anomaly detected
+   - SCORE (FLOAT): Anomaly score
+   - DETAILS (STRING): Details about the anomaly
 """

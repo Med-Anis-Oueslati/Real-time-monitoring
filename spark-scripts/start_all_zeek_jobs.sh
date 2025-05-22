@@ -23,6 +23,9 @@ SPARK_SCRIPTS=(
   "zeek_http_transform.py" # Example: zeek_http_transform.py
   "zeek_notice_transform.py" # Example: zeek_notice_transform.py
   "zeek_ssl_transform.py" # Example: zeek_ssl_transform.py
+  "system_metrics.py"
+  "transform_tshark.py"
+  # "transform_auth.py" # Example: transform_tshark.py
 )
 
 # Common Spark submission parameters for cluster mode
@@ -33,7 +36,12 @@ EXECUTOR_MEMORY="512m" # Adjust based on how lightweight your scripts are
 EXECUTOR_CORES="1"     # Match your worker config, or less if needed
 
 # Pass necessary jars (these should be available on the worker nodes via volume mounts)
-# Listing them here is still good practice for --jars arg.
+# Listing them here is still good practice for --jars arg.  "zeek_capture_loss_transform.py" # Example: zeek_capture_loss_transform.py
+  "zeek_conn_transform.py" # Example: zeek_conn_transform.py
+  "zeek_dns_transform.py" # Example: zeek_dns_transform.py
+  "zeek_http_transform.py" # Example: zeek_http_transform.py
+  "zeek_notice_transform.py" # Example: zeek_notice_transform.py
+  "zeek_ssl_transform.py" # Example: zeek_ssl_transform.py
 # Make sure this list is complete and matches your docker-compose volumes.
 SPARK_JARS="/opt/spark/jars/spark-sql-kafka-0-10_2.12-3.5.0.jar,\
 /opt/spark/jars/kafka-clients-3.4.1.jar,\
@@ -67,8 +75,10 @@ for script in "${SPARK_SCRIPTS[@]}"; do
     --executor-memory "$EXECUTOR_MEMORY" \
     --executor-cores "$EXECUTOR_CORES" \
     --jars "$SPARK_JARS" \
-    --conf "spark.driver.extraJavaOptions=-Dlog4j.configuration=file:$LOG4J_CONF" \
     --conf "spark.dynamicAllocation.enabled=true" \
+    --conf "spark.dynamicAllocation.minExecutors=1" \
+    --conf "spark.dynamicAllocation.maxExecutors=2" \
+    --conf "spark.dynamicAllocation.initialExecutors=1" \
     --conf "spark.ui.port=$PORT" \
     "/spark-scripts/$script" &
   PORT=$((PORT + 1))

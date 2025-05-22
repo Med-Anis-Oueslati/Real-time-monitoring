@@ -9,6 +9,13 @@ RUN pip install --no-cache-dir \
     kafka-python==2.0.2 \
     geoip2==4.8.0 \
     python-dotenv==1.0.1 \
-    psutil==6.0.0
+    psutil==6.0.0 \
+    numpy==1.26.4 \
+    pyarrow==14.0.2 \
+    tenacity==8.5.0 \
+    python-dotenv==1.0.1 \
+    geoip2==4.8.0 \
+    pandas==2.2.3 \
+    scipy==1.15.3
 # Switch back to non-root user
 USER 1001

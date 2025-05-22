@@ -1,9 +1,10 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, from_json, to_timestamp, year, month, dayofmonth, hour, minute, second, from_unixtime
+from pyspark.sql.functions import col, from_json, to_timestamp, year, month, dayofmonth, hour, minute, second, from_unixtime, udf
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, IntegerType, BooleanType, ArrayType
+from dotenv import load_dotenv
+import geoip2.database
 import logging
 import os
-from dotenv import load_dotenv
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
@@ -34,6 +35,35 @@ spark = SparkSession.builder \
     .config("spark.ui.port", "4053") \
     .getOrCreate()
 
+# Broadcast GeoLite2 database path
+geoip_db_path = "/opt/spark/GeoLite2-City.mmdb"
+broadcast_geoip_db_path = spark.sparkContext.broadcast(geoip_db_path)
+
+# Singleton for GeoIP Reader
+class GeoIPReaderSingleton:
+    _instance = None
+
+    @staticmethod
+    def get_instance(path):
+        if GeoIPReaderSingleton._instance is None:
+            GeoIPReaderSingleton._instance = geoip2.database.Reader(path)
+        return GeoIPReaderSingleton._instance
+    
+# Geolocation lookup function
+def get_geolocation(ip):
+    try:
+        reader = GeoIPReaderSingleton.get_instance(broadcast_geoip_db_path.value)
+        response = reader.city(ip)
+        return [
+            str(response.location.latitude),
+            str(response.location.longitude),
+            response.city.name
+        ]
+    except Exception as e:
+        return [None, None, None]
+
+# Register UDF
+get_geolocation_udf = udf(get_geolocation, ArrayType(StringType()))
 
 # Define schema for zeek_http JSON
 http_schema = StructType([
@@ -90,7 +120,9 @@ enriched_df = parsed_df \
     .withColumn("day", dayofmonth(col("timestamp"))) \
     .withColumn("hour", hour(col("timestamp"))) \
     .withColumn("minute", minute(col("timestamp"))) \
-    .withColumn("second", second(col("timestamp")))
+    .withColumn("second", second(col("timestamp"))) \
+    .withColumn("orig_geo", get_geolocation_udf(col("`id.orig_h`"))) \
+    .withColumn("resp_geo", get_geolocation_udf(col("`id.resp_h`")))
 
 # Select relevant columns
 final_df = enriched_df.select(
@@ -106,6 +138,12 @@ final_df = enriched_df.select(
     col("`id.orig_p`").alias("id_orig_p"),
     col("`id.resp_h`").alias("id_resp_h"),
     col("`id.resp_p`").alias("id_resp_p"),
+    col("orig_geo")[0].alias("orig_latitude"),
+    col("orig_geo")[1].alias("orig_longitude"),
+    col("orig_geo")[2].alias("orig_city"),
+    col("resp_geo")[0].alias("resp_latitude"),
+    col("resp_geo")[1].alias("resp_longitude"),
+    col("resp_geo")[2].alias("resp_city"),
     col("trans_depth"),
     col("method"),
     col("host"),

@@ -55,6 +55,7 @@ Generate ONLY valid Bash commands for penetration testing.
 - No markdown, no explanations, no apologies.
 - Replace $target_ip with: {ip_address}
 - One Bash command per line, directly.
+- No more than 3 commands to generate in total.
 
 ### Target:
 IP: {ip_address}

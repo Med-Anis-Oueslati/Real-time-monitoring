@@ -1,0 +1,829 @@
+.
+├── agents
+│   ├── anomaly_detection_agent.py
+│   ├── conversational_agent.py
+│   ├── conversational_agent_reflection.py
+│   ├── conversational_chatbot.py
+│   ├── cyber_attack_llama.py
+│   ├── cyber_attack.py
+│   ├── debugger_snowflake.py
+│   ├── mitigation_agent_llama.py
+│   ├── mitigation_agent.py
+│   ├── orchestration_agent.py
+│   ├── __pycache__
+│   │   ├── conversational_agent.cpython-312.pyc
+│   │   ├── mitigation_agent.cpython-312.pyc
+│   │   └── schema_description.cpython-312.pyc
+│   ├── schema_description.py
+│   └── test.py
+├── docker-compose.yml
+├── Dockerfile.kafka-connect
+├── Dockerfile.spark
+├── EDA.ipynb
+├── fluentd.conf
+├── fluentd-kali.conf
+├── fluentd-lubuntu.conf
+├── GeoLite2-City.mmdb
+├── grafana_data
+├── hadoop_config
+│   ├── core-site.xml
+│   ├── hdfs-site.xml
+│   ├── log4j.properties
+│   └── yarn.conf.raw
+├── hadoop_datanode1
+│   ├── current
+│   │   ├── BP-1945817099-172.20.0.2-1743503210127  [error opening dir]
+│   │   └── VERSION
+│   └── in_use.lock
+├── hadoop_datanode2
+│   ├── current
+│   │   ├── BP-1945817099-172.20.0.2-1743503210127  [error opening dir]
+│   │   └── VERSION
+│   └── in_use.lock
+├── hadoop_namenode
+│   ├── current  [error opening dir]
+│   └── in_use.lock
+├── hdfs_data
+├── hdfs-sink.json
+├── init-datanode.sh
+├── kafka-connect-plugins
+│   └── confluentinc-kafka-connect-hdfs3-1.2.4
+│       ├── assets
+│       │   └── confluent.png
+│       ├── doc
+│       │   ├── licenses
+│       │   │   ├── LICENSE-accessors-smart-1.2.txt
+│       │   │   ├── LICENSE-aircompressor-0.10.txt
+│       │   │   ├── LICENSE-ant-1.9.1.txt
+│       │   │   ├── LICENSE-ant-launcher-1.9.1.txt
+│       │   │   ├── LICENSE-aopalliance-repackaged-2.5.0-b32.txt
+│       │   │   ├── LICENSE-arrow-format-0.8.0.txt
+│       │   │   ├── LICENSE-arrow-memory-0.8.0.txt
+│       │   │   ├── LICENSE-arrow-vector-0.8.0.txt
+│       │   │   ├── LICENSE-audience-annotations-0.5.0.txt
+│       │   │   ├── LICENSE-avatica-1.11.0.txt
+│       │   │   ├── LICENSE-avro-1.8.1.txt
+│       │   │   ├── LICENSE-avro-ipc-1.8.1.txt
+│       │   │   ├── LICENSE-avro-mapred-1.8.1.txt
+│       │   │   ├── LICENSE-bcprov-jdk16-1.45.txt
+│       │   │   ├── LICENSE-bonecp-0.8.0.RELEASE.txt
+│       │   │   ├── LICENSE-calcite-core-1.16.0.txt
+│       │   │   ├── LICENSE-calcite-druid-1.16.0.txt
+│       │   │   ├── LICENSE-calcite-linq4j-1.16.0.txt
+│       │   │   ├── LICENSE-commons-beanutils-1.9.3.txt
+│       │   │   ├── LICENSE-commons-cli-1.2.txt
+│       │   │   ├── LICENSE-commons-codec-1.5.txt
+│       │   │   ├── LICENSE-commons-collections-3.2.2.txt
+│       │   │   ├── LICENSE-commons-collections4-4.1.txt
+│       │   │   ├── LICENSE-commons-compress-1.9.txt
+│       │   │   ├── LICENSE-commons-configuration2-2.1.1.txt
+│       │   │   ├── LICENSE-commons-crypto-1.0.0.txt
+│       │   │   ├── LICENSE-commons-daemon-1.0.13.txt
+│       │   │   ├── LICENSE-commons-dbcp-1.4.txt
+│       │   │   ├── LICENSE-commons-io-2.5.txt
+│       │   │   ├── LICENSE-commons-lang-2.6.txt
+│       │   │   ├── LICENSE-commons-lang3-3.8.1.txt
+│       │   │   ├── LICENSE-commons-logging-1.1.3.txt
+│       │   │   ├── LICENSE-commons-math3-3.1.1.txt
+│       │   │   ├── LICENSE-commons-net-3.6.txt
+│       │   │   ├── LICENSE-commons-pool-1.5.4.txt
+│       │   │   ├── LICENSE-curator-client-2.13.0.txt
+│       │   │   ├── LICENSE-curator-framework-2.12.0.txt
+│       │   │   ├── LICENSE-curator-recipes-2.13.0.txt
+│       │   │   ├── LICENSE-datanucleus-api-jdo-4.2.4.txt
+│       │   │   ├── LICENSE-datanucleus-core-4.1.17.txt
+│       │   │   ├── LICENSE-datanucleus-rdbms-4.1.19.txt
+│       │   │   ├── LICENSE-derby-10.14.1.0.txt
+│       │   │   ├── LICENSE-dnsjava-2.1.7.txt
+│       │   │   ├── LICENSE-dropwizard-metrics-hadoop-metrics2-reporter-0.1.2.txt
+│       │   │   ├── LICENSE-ehcache-3.3.1-0.txt
+│       │   │   ├── LICENSE-ehcache-3.3.1-1.txt
+│       │   │   ├── LICENSE-esri-geometry-api-2.0.0.txt
+│       │   │   ├── LICENSE-findbugs-annotations-1.3.9-1.txt
+│       │   │   ├── LICENSE-flatbuffers-1.2.0-3f79e055.txt
+│       │   │   ├── LICENSE-fst-2.50.txt
+│       │   │   ├── LICENSE-geronimo-jcache_1.0_spec-1.0-alpha-1.txt
+│       │   │   ├── LICENSE-groovy-all-2.4.11.txt
+│       │   │   ├── LICENSE-guava-20.0.txt
+│       │   │   ├── LICENSE-guice-4.0.txt
+│       │   │   ├── LICENSE-guice-assistedinject-3.0.txt
+│       │   │   ├── LICENSE-guice-servlet-4.0.txt
+│       │   │   ├── LICENSE-hadoop-annotations-3.1.2.txt
+│       │   │   ├── LICENSE-hadoop-archives-3.1.0.txt
+│       │   │   ├── LICENSE-hadoop-auth-3.1.2.txt
+│       │   │   ├── LICENSE-hadoop-client-3.1.2.txt
+│       │   │   ├── LICENSE-hadoop-common-3.1.2.txt
+│       │   │   ├── LICENSE-hadoop-hdfs-3.1.2.txt
+│       │   │   ├── LICENSE-hadoop-hdfs-client-3.1.2.txt
+│       │   │   ├── LICENSE-hadoop-mapreduce-client-common-3.1.2.txt
+│       │   │   ├── LICENSE-hadoop-mapreduce-client-core-3.1.2.txt
+│       │   │   ├── LICENSE-hadoop-mapreduce-client-jobclient-3.1.2.txt
+│       │   │   ├── LICENSE-hadoop-yarn-api-3.1.2.txt
+│       │   │   ├── LICENSE-hadoop-yarn-client-3.1.2.txt
+│       │   │   ├── LICENSE-hadoop-yarn-common-3.1.2.txt
+│       │   │   ├── LICENSE-hadoop-yarn-registry-3.1.0.txt
+│       │   │   ├── LICENSE-hadoop-yarn-server-applicationhistoryservice-3.1.2.txt
+│       │   │   ├── LICENSE-hadoop-yarn-server-common-3.1.2.txt
+│       │   │   ├── LICENSE-hadoop-yarn-server-resourcemanager-3.1.2.txt
+│       │   │   ├── LICENSE-hadoop-yarn-server-web-proxy-3.1.2.txt
+│       │   │   ├── LICENSE-hbase-client-2.0.0-alpha4.txt
+│       │   │   ├── LICENSE-hbase-common-2.0.0-alpha4-tests.txt
+│       │   │   ├── LICENSE-hbase-common-2.0.0-alpha4.txt
+│       │   │   ├── LICENSE-hbase-hadoop2-compat-2.0.0-alpha4.txt
+│       │   │   ├── LICENSE-hbase-hadoop-compat-2.0.0-alpha4.txt
+│       │   │   ├── LICENSE-hbase-http-2.0.0-alpha4.txt
+│       │   │   ├── LICENSE-hbase-mapreduce-2.0.0-alpha4.txt
+│       │   │   ├── LICENSE-hbase-metrics-2.0.0-alpha4.txt
+│       │   │   ├── LICENSE-hbase-metrics-api-2.0.0-alpha4.txt
+│       │   │   ├── LICENSE-hbase-prefix-tree-2.0.0-alpha4.txt
+│       │   │   ├── LICENSE-hbase-procedure-2.0.0-alpha4.txt
+│       │   │   ├── LICENSE-hbase-protocol-2.0.0-alpha4.txt
+│       │   │   ├── LICENSE-hbase-protocol-shaded-2.0.0-alpha4.txt
+│       │   │   ├── LICENSE-hbase-replication-2.0.0-alpha4.txt
+│       │   │   ├── LICENSE-hbase-server-2.0.0-alpha4.txt
+│       │   │   ├── LICENSE-hbase-shaded-miscellaneous-1.0.1.txt
+│       │   │   ├── LICENSE-hbase-shaded-netty-1.0.1.txt
+│       │   │   ├── LICENSE-hbase-shaded-protobuf-1.0.1.txt
+│       │   │   ├── LICENSE-HikariCP-2.6.1.txt
+│       │   │   ├── LICENSE-HikariCP-java7-2.4.12.txt
+│       │   │   ├── LICENSE-hive-classification-3.1.1.txt
+│       │   │   ├── LICENSE-hive-cli-3.1.1.txt
+│       │   │   ├── LICENSE-hive-common-3.1.1.txt
+│       │   │   ├── LICENSE-hive-exec-3.1.1-core.txt
+│       │   │   ├── LICENSE-hive-hcatalog-core-3.1.1.txt
+│       │   │   ├── LICENSE-hive-llap-client-3.1.1.txt
+│       │   │   ├── LICENSE-hive-llap-common-3.1.1-tests.txt
+│       │   │   ├── LICENSE-hive-llap-common-3.1.1.txt
+│       │   │   ├── LICENSE-hive-llap-server-3.1.1.txt
+│       │   │   ├── LICENSE-hive-llap-tez-3.1.1.txt
+│       │   │   ├── LICENSE-hive-metastore-3.1.1.txt
+│       │   │   ├── LICENSE-hive-serde-3.1.1.txt
+│       │   │   ├── LICENSE-hive-service-3.1.1.txt
+│       │   │   ├── LICENSE-hive-service-rpc-3.1.1.txt
+│       │   │   ├── LICENSE-hive-shims-0.23-3.1.1.txt
+│       │   │   ├── LICENSE-hive-shims-3.1.1.txt
+│       │   │   ├── LICENSE-hive-shims-common-3.1.1.txt
+│       │   │   ├── LICENSE-hive-shims-scheduler-3.1.1.txt
+│       │   │   ├── LICENSE-hive-standalone-metastore-3.1.1.txt
+│       │   │   ├── LICENSE-hive-storage-api-2.7.0.txt
+│       │   │   ├── LICENSE-hive-upgrade-acid-3.1.1.txt
+│       │   │   ├── LICENSE-hive-vector-code-gen-3.1.1.txt
+│       │   │   ├── LICENSE-hk2-api-2.5.0-b32.txt
+│       │   │   ├── LICENSE-hk2-locator-2.5.0-b32.txt
+│       │   │   ├── LICENSE-hk2-utils-2.5.0-b32.txt
+│       │   │   ├── LICENSE-hppc-0.7.2.txt
+│       │   │   ├── LICENSE-htrace-core-3.2.0-incubating.txt
+│       │   │   ├── LICENSE-htrace-core4-4.1.0-incubating.txt
+│       │   │   ├── LICENSE-httpclient-4.5.2.txt
+│       │   │   ├── LICENSE-httpcore-4.4.4.txt
+│       │   │   ├── LICENSE-ivy-2.4.0.txt
+│       │   │   ├── LICENSE-jackson-annotations-2.9.0.txt
+│       │   │   ├── LICENSE-jackson-core-2.9.6.txt
+│       │   │   ├── LICENSE-jackson-core-asl-1.9.13.txt
+│       │   │   ├── LICENSE-jackson-databind-2.9.6.txt
+│       │   │   ├── LICENSE-jackson-jaxrs-1.9.2.txt
+│       │   │   ├── LICENSE-jackson-jaxrs-base-2.7.8.txt
+│       │   │   ├── LICENSE-jackson-jaxrs-json-provider-2.7.8.txt
+│       │   │   ├── LICENSE-jackson-mapper-asl-1.9.13.txt
+│       │   │   ├── LICENSE-jackson-module-jaxb-annotations-2.7.8.txt
+│       │   │   ├── LICENSE-jackson-xc-1.9.2.txt
+│       │   │   ├── LICENSE-javassist-3.20.0-GA.txt
+│       │   │   ├── LICENSE-java-util-1.9.0.txt
+│       │   │   ├── LICENSE-javax.inject-2.5.0-b32.txt
+│       │   │   ├── LICENSE-javax.jdo-3.2.0-m3.txt
+│       │   │   ├── LICENSE-javax.servlet.jsp-2.3.2.txt
+│       │   │   ├── LICENSE-javax.servlet.jsp-api-2.3.1.txt
+│       │   │   ├── LICENSE-javax.ws.rs-api-2.0.1.txt
+│       │   │   ├── LICENSE-javolution-5.5.1.txt
+│       │   │   ├── LICENSE-jaxb-api-2.3.0.txt
+│       │   │   ├── LICENSE-jcip-annotations-1.0-1.txt
+│       │   │   ├── LICENSE-jcodings-1.0.18.txt
+│       │   │   ├── LICENSE-jdo-api-3.0.1.txt
+│       │   │   ├── LICENSE-jersey-client-1.19.txt
+│       │   │   ├── LICENSE-jersey-client-2.25.1.txt
+│       │   │   ├── LICENSE-jersey-common-2.25.1.txt
+│       │   │   ├── LICENSE-jersey-container-servlet-core-2.25.1.txt
+│       │   │   ├── LICENSE-jersey-core-1.19.txt
+│       │   │   ├── LICENSE-jersey-guava-2.25.1.txt
+│       │   │   ├── LICENSE-jersey-guice-1.19.txt
+│       │   │   ├── LICENSE-jersey-json-1.19.txt
+│       │   │   ├── LICENSE-jersey-media-jaxb-2.25.1.txt
+│       │   │   ├── LICENSE-jersey-server-1.19.txt
+│       │   │   ├── LICENSE-jersey-server-2.25.1.txt
+│       │   │   ├── LICENSE-jersey-servlet-1.19.txt
+│       │   │   ├── LICENSE-jettison-1.1.txt
+│       │   │   ├── LICENSE-jetty-runner-9.3.20.v20170531.txt
+│       │   │   ├── LICENSE-jline-2.12.1.txt
+│       │   │   ├── LICENSE-joda-time-2.9.6.txt
+│       │   │   ├── LICENSE-joni-2.1.11.txt
+│       │   │   ├── LICENSE-jose4j-0.6.4.txt
+│       │   │   ├── LICENSE-jpam-1.1.txt
+│       │   │   ├── LICENSE-json-1.8.txt
+│       │   │   ├── LICENSE-json-io-2.5.1.txt
+│       │   │   ├── LICENSE-json-smart-2.3.txt
+│       │   │   ├── LICENSE-jsr305-3.0.2.txt
+│       │   │   ├── LICENSE-jsr311-api-1.1.1.txt
+│       │   │   ├── LICENSE-jta-1.1.txt
+│       │   │   ├── LICENSE-kafka-avro-serializer-5.2.2.txt
+│       │   │   ├── LICENSE-kafka-clients-2.1.0-cp2.txt
+│       │   │   ├── LICENSE-kafka-connect-avro-converter-5.2.2.txt
+│       │   │   ├── LICENSE-kafka-schema-registry-client-5.2.2.txt
+│       │   │   ├── LICENSE-kerb-admin-1.0.1.txt
+│       │   │   ├── LICENSE-kerb-client-1.0.1.txt
+│       │   │   ├── LICENSE-kerb-common-1.0.1.txt
+│       │   │   ├── LICENSE-kerb-core-1.0.1.txt
+│       │   │   ├── LICENSE-kerb-crypto-1.0.1.txt
+│       │   │   ├── LICENSE-kerb-identity-1.0.1.txt
+│       │   │   ├── LICENSE-kerb-server-1.0.1.txt
+│       │   │   ├── LICENSE-kerb-simplekdc-1.0.1.txt
+│       │   │   ├── LICENSE-kerb-util-1.0.1.txt
+│       │   │   ├── LICENSE-kerby-asn1-1.0.1.txt
+│       │   │   ├── LICENSE-kerby-config-1.0.1.txt
+│       │   │   ├── LICENSE-kerby-pkix-1.0.1.txt
+│       │   │   ├── LICENSE-kerby-util-1.0.1.txt
+│       │   │   ├── LICENSE-kerby-xdr-1.0.1.txt
+│       │   │   ├── LICENSE-leveldbjni-all-1.8.txt
+│       │   │   ├── LICENSE-libthrift-0.9.3.txt
+│       │   │   ├── LICENSE-log4j-1.2.17.txt
+│       │   │   ├── LICENSE-log4j-1.2-api-2.10.0.txt
+│       │   │   ├── LICENSE-log4j-api-2.10.0.txt
+│       │   │   ├── LICENSE-log4j-core-2.10.0.txt
+│       │   │   ├── LICENSE-log4j-slf4j-impl-2.10.0.txt
+│       │   │   ├── LICENSE-log4j-web-2.10.0.txt
+│       │   │   ├── LICENSE-metrics-core-3.1.0.txt
+│       │   │   ├── LICENSE-metrics-json-3.1.0.txt
+│       │   │   ├── LICENSE-metrics-jvm-3.1.0.txt
+│       │   │   ├── LICENSE-mssql-jdbc-6.2.1.jre7.txt
+│       │   │   ├── LICENSE-netty-3.10.6.Final.txt
+│       │   │   ├── LICENSE-netty-buffer-4.0.52.Final.txt
+│       │   │   ├── LICENSE-netty-common-4.0.52.Final.txt
+│       │   │   ├── LICENSE-nimbus-jose-jwt-4.41.1.txt
+│       │   │   ├── LICENSE-opencsv-2.3.txt
+│       │   │   ├── LICENSE-orc-core-1.5.1.txt
+│       │   │   ├── LICENSE-orc-shims-1.5.1.txt
+│       │   │   ├── LICENSE-oro-2.0.8.txt
+│       │   │   ├── LICENSE-parquet-avro-1.8.2.txt
+│       │   │   ├── LICENSE-parquet-column-1.8.2.txt
+│       │   │   ├── LICENSE-parquet-common-1.8.2.txt
+│       │   │   ├── LICENSE-parquet-encoding-1.8.2.txt
+│       │   │   ├── LICENSE-parquet-format-2.3.1.txt
+│       │   │   ├── LICENSE-parquet-hadoop-1.8.2.txt
+│       │   │   ├── LICENSE-parquet-hadoop-bundle-1.10.0.txt
+│       │   │   ├── LICENSE-parquet-jackson-1.8.2.txt
+│       │   │   ├── LICENSE-protobuf-java-2.5.0.txt
+│       │   │   ├── LICENSE-protobuf-java-util-3.4.0.txt
+│       │   │   ├── LICENSE-re2j-1.1.txt
+│       │   │   ├── LICENSE-servlet-api-2.5-20081211.txt
+│       │   │   ├── LICENSE-snappy-java-1.1.1.3.txt
+│       │   │   ├── LICENSE-sqlline-1.3.0.txt
+│       │   │   ├── LICENSE-ST4-4.0.4.txt
+│       │   │   ├── LICENSE-stax2-api-3.1.4.txt
+│       │   │   ├── LICENSE-taglibs-standard-impl-1.2.5.txt
+│       │   │   ├── LICENSE-taglibs-standard-spec-1.2.5.txt
+│       │   │   ├── LICENSE-token-provider-1.0.1.txt
+│       │   │   ├── LICENSE-transaction-api-1.1.txt
+│       │   │   ├── LICENSE-validation-api-1.1.0.Final.txt
+│       │   │   ├── LICENSE-velocity-1.5.txt
+│       │   │   ├── LICENSE-woodstox-core-5.0.3.txt
+│       │   │   └── LICENSE-zookeeper-3.4.13.txt
+│       │   ├── licenses.html
+│       │   ├── notices
+│       │   │   ├── NOTICE-arrow-format-0.8.0.txt
+│       │   │   ├── NOTICE-arrow-memory-0.8.0.txt
+│       │   │   ├── NOTICE-arrow-vector-0.8.0.txt
+│       │   │   ├── NOTICE-audience-annotations-0.5.0.txt
+│       │   │   ├── NOTICE-avatica-1.11.0.txt
+│       │   │   ├── NOTICE-avro-1.8.1.txt
+│       │   │   ├── NOTICE-avro-ipc-1.8.1.txt
+│       │   │   ├── NOTICE-avro-mapred-1.8.1.txt
+│       │   │   ├── NOTICE-calcite-core-1.16.0.txt
+│       │   │   ├── NOTICE-calcite-druid-1.16.0.txt
+│       │   │   ├── NOTICE-calcite-linq4j-1.16.0.txt
+│       │   │   ├── NOTICE-curator-client-2.13.0.txt
+│       │   │   ├── NOTICE-curator-framework-2.12.0.txt
+│       │   │   ├── NOTICE-curator-recipes-2.13.0.txt
+│       │   │   ├── NOTICE-derby-10.14.1.0.txt
+│       │   │   ├── NOTICE-dropwizard-metrics-hadoop-metrics2-reporter-0.1.2.txt
+│       │   │   ├── NOTICE-ehcache-3.3.1.txt
+│       │   │   ├── NOTICE-geronimo-jcache_1.0_spec-1.0-alpha-1.txt
+│       │   │   ├── NOTICE-groovy-all-2.4.11.txt
+│       │   │   ├── NOTICE-guice-4.0.txt
+│       │   │   ├── NOTICE-guice-assistedinject-3.0.txt
+│       │   │   ├── NOTICE-guice-servlet-4.0.txt
+│       │   │   ├── NOTICE-hbase-client-2.0.0-alpha4.txt
+│       │   │   ├── NOTICE-hbase-common-2.0.0-alpha4-tests.txt
+│       │   │   ├── NOTICE-hbase-common-2.0.0-alpha4.txt
+│       │   │   ├── NOTICE-hbase-hadoop2-compat-2.0.0-alpha4.txt
+│       │   │   ├── NOTICE-hbase-hadoop-compat-2.0.0-alpha4.txt
+│       │   │   ├── NOTICE-hbase-http-2.0.0-alpha4.txt
+│       │   │   ├── NOTICE-hbase-mapreduce-2.0.0-alpha4.txt
+│       │   │   ├── NOTICE-hbase-metrics-2.0.0-alpha4.txt
+│       │   │   ├── NOTICE-hbase-metrics-api-2.0.0-alpha4.txt
+│       │   │   ├── NOTICE-hbase-prefix-tree-2.0.0-alpha4.txt
+│       │   │   ├── NOTICE-hbase-procedure-2.0.0-alpha4.txt
+│       │   │   ├── NOTICE-hbase-protocol-2.0.0-alpha4.txt
+│       │   │   ├── NOTICE-hbase-protocol-shaded-2.0.0-alpha4.txt
+│       │   │   ├── NOTICE-hbase-replication-2.0.0-alpha4.txt
+│       │   │   ├── NOTICE-hbase-server-2.0.0-alpha4.txt
+│       │   │   ├── NOTICE-hbase-shaded-miscellaneous-1.0.1.txt
+│       │   │   ├── NOTICE-hbase-shaded-netty-1.0.1.txt
+│       │   │   ├── NOTICE-hbase-shaded-protobuf-1.0.1.txt
+│       │   │   ├── NOTICE-hive-classification-3.1.1.txt
+│       │   │   ├── NOTICE-hive-cli-3.1.1.txt
+│       │   │   ├── NOTICE-hive-common-3.1.1.txt
+│       │   │   ├── NOTICE-hive-exec-3.1.1-core.txt
+│       │   │   ├── NOTICE-hive-hcatalog-core-3.1.1.txt
+│       │   │   ├── NOTICE-hive-llap-client-3.1.1.txt
+│       │   │   ├── NOTICE-hive-llap-common-3.1.1-tests.txt
+│       │   │   ├── NOTICE-hive-llap-common-3.1.1.txt
+│       │   │   ├── NOTICE-hive-llap-server-3.1.1.txt
+│       │   │   ├── NOTICE-hive-llap-tez-3.1.1.txt
+│       │   │   ├── NOTICE-hive-metastore-3.1.1.txt
+│       │   │   ├── NOTICE-hive-serde-3.1.1.txt
+│       │   │   ├── NOTICE-hive-service-3.1.1.txt
+│       │   │   ├── NOTICE-hive-service-rpc-3.1.1.txt
+│       │   │   ├── NOTICE-hive-shims-0.23-3.1.1.txt
+│       │   │   ├── NOTICE-hive-shims-3.1.1.txt
+│       │   │   ├── NOTICE-hive-shims-common-3.1.1.txt
+│       │   │   ├── NOTICE-hive-shims-scheduler-3.1.1.txt
+│       │   │   ├── NOTICE-hive-standalone-metastore-3.1.1.txt
+│       │   │   ├── NOTICE-hive-storage-api-2.7.0.txt
+│       │   │   ├── NOTICE-hive-upgrade-acid-3.1.1.txt
+│       │   │   ├── NOTICE-hive-vector-code-gen-3.1.1.txt
+│       │   │   ├── NOTICE-htrace-core-3.2.0-incubating.txt
+│       │   │   ├── NOTICE-htrace-core4-4.1.0-incubating.txt
+│       │   │   ├── NOTICE-httpclient-4.5.2.txt
+│       │   │   ├── NOTICE-httpcore-4.4.4.txt
+│       │   │   ├── NOTICE-ivy-2.4.0.txt
+│       │   │   ├── NOTICE-jackson-core-2.9.6.txt
+│       │   │   ├── NOTICE-jackson-core-asl-1.9.13.txt
+│       │   │   ├── NOTICE-jackson-databind-2.9.6.txt
+│       │   │   ├── NOTICE-jackson-jaxrs-1.9.2.txt
+│       │   │   ├── NOTICE-jackson-jaxrs-json-provider-2.7.8.txt
+│       │   │   ├── NOTICE-jackson-mapper-asl-1.9.13.txt
+│       │   │   ├── NOTICE-jackson-module-jaxb-annotations-2.7.8.txt
+│       │   │   ├── NOTICE-jackson-xc-1.9.2.txt
+│       │   │   ├── NOTICE-jetty-runner-9.3.20.v20170531.txt
+│       │   │   ├── NOTICE-kafka-clients-2.1.0-cp2.txt
+│       │   │   ├── NOTICE-kerb-admin-1.0.1.txt
+│       │   │   ├── NOTICE-kerb-client-1.0.1.txt
+│       │   │   ├── NOTICE-kerb-common-1.0.1.txt
+│       │   │   ├── NOTICE-kerb-core-1.0.1.txt
+│       │   │   ├── NOTICE-kerb-crypto-1.0.1.txt
+│       │   │   ├── NOTICE-kerb-identity-1.0.1.txt
+│       │   │   ├── NOTICE-kerb-server-1.0.1.txt
+│       │   │   ├── NOTICE-kerb-simplekdc-1.0.1.txt
+│       │   │   ├── NOTICE-kerb-util-1.0.1.txt
+│       │   │   ├── NOTICE-kerby-asn1-1.0.1.txt
+│       │   │   ├── NOTICE-kerby-config-1.0.1.txt
+│       │   │   ├── NOTICE-kerby-pkix-1.0.1.txt
+│       │   │   ├── NOTICE-kerby-util-1.0.1.txt
+│       │   │   ├── NOTICE-kerby-xdr-1.0.1.txt
+│       │   │   ├── NOTICE-log4j-1.2.17.txt
+│       │   │   ├── NOTICE-log4j-1.2-api-2.10.0.txt
+│       │   │   ├── NOTICE-log4j-api-2.10.0.txt
+│       │   │   ├── NOTICE-log4j-core-2.10.0.txt
+│       │   │   ├── NOTICE-log4j-slf4j-impl-2.10.0.txt
+│       │   │   ├── NOTICE-log4j-web-2.10.0.txt
+│       │   │   ├── NOTICE-orc-core-1.5.1.txt
+│       │   │   ├── NOTICE-orc-shims-1.5.1.txt
+│       │   │   ├── NOTICE-parquet-avro-1.8.2.txt
+│       │   │   ├── NOTICE-parquet-column-1.8.2.txt
+│       │   │   ├── NOTICE-parquet-common-1.8.2.txt
+│       │   │   ├── NOTICE-parquet-encoding-1.8.2.txt
+│       │   │   ├── NOTICE-parquet-format-2.3.1.txt
+│       │   │   ├── NOTICE-parquet-hadoop-1.8.2.txt
+│       │   │   ├── NOTICE-parquet-hadoop-bundle-1.10.0.txt
+│       │   │   ├── NOTICE-parquet-jackson-1.8.2.txt
+│       │   │   ├── NOTICE-taglibs-standard-impl-1.2.5.txt
+│       │   │   ├── NOTICE-taglibs-standard-spec-1.2.5.txt
+│       │   │   ├── NOTICE-token-provider-1.0.1.txt
+│       │   │   └── NOTICE-velocity-1.5.txt
+│       │   ├── README.md
+│       │   └── version.txt
+│       ├── etc
+│       │   └── quickstart-hdfs.properties
+│       ├── lib
+│       │   ├── accessors-smart-2.4.9.jar
+│       │   ├── agrona-1.12.0.jar
+│       │   ├── aircompressor-0.27.jar
+│       │   ├── antlr-runtime-3.5.2.jar
+│       │   ├── aopalliance-1.0.jar
+│       │   ├── apache-curator-2.12.0.pom
+│       │   ├── apache-el-8.5.100.jar
+│       │   ├── apache-jsp-8.5.100.jar
+│       │   ├── apache-jsp-9.4.57.v20241219.jar
+│       │   ├── apache-jstl-9.4.57.v20241219.jar
+│       │   ├── api-asn1-api-2.1.5.jar
+│       │   ├── api-asn1-ber-2.1.5.jar
+│       │   ├── apiguardian-api-1.1.2.jar
+│       │   ├── api-i18n-2.1.5.jar
+│       │   ├── api-ldap-model-2.1.5.jar
+│       │   ├── api-util-2.1.5.jar
+│       │   ├── arrow-format-0.8.0.jar
+│       │   ├── arrow-memory-0.8.0.jar
+│       │   ├── arrow-vector-0.8.0.jar
+│       │   ├── asm-9.3.jar
+│       │   ├── asm-commons-9.7.1.jar
+│       │   ├── asm-tree-9.7.1.jar
+│       │   ├── audience-annotations-0.11.0.jar
+│       │   ├── avatica-1.22.0.jar
+│       │   ├── avatica-metrics-1.16.0.jar
+│       │   ├── avatica-server-1.16.0.jar
+│       │   ├── avro-1.11.4.jar
+│       │   ├── avro-ipc-1.11.4.jar
+│       │   ├── avro-ipc-jetty-1.11.4.jar
+│       │   ├── avro-mapred-1.11.4.jar
+│       │   ├── bcpkix-jdk18on-1.78.jar
+│       │   ├── bcprov-jdk15on-1.70.jar
+│       │   ├── bcprov-jdk18on-1.78.jar
+│       │   ├── bcutil-jdk18on-1.78.jar
+│       │   ├── bonecp-0.8.0.RELEASE.jar
+│       │   ├── caffeine-2.9.3.jar
+│       │   ├── calcite-core-1.22.0.jar
+│       │   ├── calcite-druid-1.22.0.jar
+│       │   ├── calcite-linq4j-1.22.0.jar
+│       │   ├── commons-beanutils-1.9.4.jar
+│       │   ├── commons-cli-1.5.0.jar
+│       │   ├── commons-codec-1.15.jar
+│       │   ├── commons-collections-3.2.2.jar
+│       │   ├── commons-collections4-4.4.jar
+│       │   ├── commons-compiler-3.0.11.jar
+│       │   ├── commons-compress-1.26.1.jar
+│       │   ├── commons-configuration2-2.10.1.jar
+│       │   ├── commons-crypto-1.1.0.jar
+│       │   ├── commons-daemon-1.0.13.jar
+│       │   ├── commons-dbcp-1.4.jar
+│       │   ├── commons-dbcp2-2.6.0.jar
+│       │   ├── commons-io-2.15.1.jar
+│       │   ├── commons-lang-2.6.jar
+│       │   ├── commons-lang3-3.10.jar
+│       │   ├── commons-logging-1.3.0.jar
+│       │   ├── commons-math3-3.6.1.jar
+│       │   ├── commons-net-3.9.0.jar
+│       │   ├── commons-pool-1.6.jar
+│       │   ├── commons-pool2-2.6.1.jar
+│       │   ├── commons-text-1.11.0.jar
+│       │   ├── common-utils-6.2.16-9.jar
+│       │   ├── confluent-licensing-new-6.2.0-ce.jar
+│       │   ├── confluent-serializers-new-6.2.16-11-ce.jar
+│       │   ├── connect-licensing-extensions-0.8.48.jar
+│       │   ├── connect-utils-0.5.0.jar
+│       │   ├── curator-client-5.2.0.jar
+│       │   ├── curator-framework-2.12.0.jar
+│       │   ├── curator-recipes-5.2.0.jar
+│       │   ├── datanucleus-api-jdo-4.2.4.jar
+│       │   ├── datanucleus-core-4.1.17.jar
+│       │   ├── datanucleus-rdbms-4.1.19.jar
+│       │   ├── derby-10.14.2.0.jar
+│       │   ├── disruptor-3.4.4.jar
+│       │   ├── dnsjava-3.6.1.jar
+│       │   ├── dropwizard-metrics-hadoop-metrics2-reporter-0.1.2.jar
+│       │   ├── ecj-3.26.0.jar
+│       │   ├── error_prone_annotations-2.21.1.jar
+│       │   ├── esri-geometry-api-2.2.0.jar
+│       │   ├── fastutil-6.5.6.jar
+│       │   ├── findbugs-annotations-1.3.9-1.jar
+│       │   ├── flatbuffers-1.2.0-3f79e055.jar
+│       │   ├── groovy-all-2.4.21.jar
+│       │   ├── gson-2.9.0.jar
+│       │   ├── guice-4.2.3.jar
+│       │   ├── guice-assistedinject-3.0.jar
+│       │   ├── hadoop-annotations-3.4.0.jar
+│       │   ├── hadoop-archives-3.4.0.jar
+│       │   ├── hadoop-auth-3.4.0.jar
+│       │   ├── hadoop-client-3.4.0.jar
+│       │   ├── hadoop-common-3.4.0.jar
+│       │   ├── hadoop-hdfs-3.4.0.jar
+│       │   ├── hadoop-hdfs-client-3.4.0.jar
+│       │   ├── hadoop-mapreduce-client-common-3.4.0.jar
+│       │   ├── hadoop-mapreduce-client-core-3.4.0.jar
+│       │   ├── hadoop-mapreduce-client-jobclient-3.4.0.jar
+│       │   ├── hadoop-shaded-protobuf_3_21-1.2.0.jar
+│       │   ├── hadoop-yarn-api-3.4.0.jar
+│       │   ├── hadoop-yarn-client-3.4.0.jar
+│       │   ├── hadoop-yarn-common-3.4.0.jar
+│       │   ├── hadoop-yarn-registry-3.1.0.jar
+│       │   ├── hbase-asyncfs-2.6.0.jar
+│       │   ├── hbase-client-2.6.0.jar
+│       │   ├── hbase-common-2.0.0-alpha4-tests.jar
+│       │   ├── hbase-common-2.6.0.jar
+│       │   ├── hbase-hadoop2-compat-2.6.0.jar
+│       │   ├── hbase-hadoop-compat-2.6.0.jar
+│       │   ├── hbase-http-2.6.0.jar
+│       │   ├── hbase-logging-2.6.0.jar
+│       │   ├── hbase-mapreduce-2.0.0-alpha4.jar
+│       │   ├── hbase-metrics-2.6.0.jar
+│       │   ├── hbase-metrics-api-2.6.0.jar
+│       │   ├── hbase-prefix-tree-2.0.0-alpha4.jar
+│       │   ├── hbase-procedure-2.6.0.jar
+│       │   ├── hbase-protocol-2.6.0.jar
+│       │   ├── hbase-protocol-shaded-2.6.0.jar
+│       │   ├── hbase-replication-2.6.0.jar
+│       │   ├── hbase-server-2.6.0.jar
+│       │   ├── hbase-shaded-gson-4.1.7.jar
+│       │   ├── hbase-shaded-jersey-4.1.7.jar
+│       │   ├── hbase-shaded-miscellaneous-4.1.5.jar
+│       │   ├── hbase-unsafe-4.1.7.jar
+│       │   ├── hbase-zookeeper-2.6.0.jar
+│       │   ├── HikariCP-2.6.1.jar
+│       │   ├── hive-classification-3.1.3.jar
+│       │   ├── hive-cli-3.1.3.jar
+│       │   ├── hive-common-3.1.3.jar
+│       │   ├── hive-exec-3.1.3-core.jar
+│       │   ├── hive-hcatalog-core-3.1.3.jar
+│       │   ├── hive-llap-client-3.1.3.jar
+│       │   ├── hive-llap-common-3.1.3.jar
+│       │   ├── hive-llap-common-3.1.3-tests.jar
+│       │   ├── hive-llap-server-3.1.3.jar
+│       │   ├── hive-llap-tez-3.1.3.jar
+│       │   ├── hive-metastore-3.1.3.jar
+│       │   ├── hive-serde-3.1.3.jar
+│       │   ├── hive-service-3.1.3.jar
+│       │   ├── hive-service-rpc-3.1.3.jar
+│       │   ├── hive-shims-0.23-3.1.3.jar
+│       │   ├── hive-shims-3.1.3.jar
+│       │   ├── hive-shims-common-3.1.3.jar
+│       │   ├── hive-shims-scheduler-3.1.3.jar
+│       │   ├── hive-standalone-metastore-3.1.3.jar
+│       │   ├── hive-storage-api-2.7.0.jar
+│       │   ├── hive-upgrade-acid-3.1.3.jar
+│       │   ├── hive-vector-code-gen-3.1.3.jar
+│       │   ├── hppc-0.7.2.jar
+│       │   ├── httpclient-4.5.13.jar
+│       │   ├── httpcore-4.4.13.jar
+│       │   ├── ivy-2.5.2.jar
+│       │   ├── j2objc-annotations-2.8.jar
+│       │   ├── jackson-annotations-2.16.0.jar
+│       │   ├── jackson-core-2.16.0.jar
+│       │   ├── jackson-core-asl-1.9.14.jdk17-redhat-00001.jar
+│       │   ├── jackson-databind-2.16.0.jar
+│       │   ├── jackson-dataformat-yaml-2.16.0.jar
+│       │   ├── jackson-mapper-asl-1.9.14.jdk17-redhat-00001.jar
+│       │   ├── jamon-runtime-2.4.1.jar
+│       │   ├── janino-3.1.12.jar
+│       │   ├── javax.activation-api-1.2.0.jar
+│       │   ├── javax.annotation-api-1.3.2.jar
+│       │   ├── javax.el-3.0.0.jar
+│       │   ├── javax.inject-1.jar
+│       │   ├── javax.jdo-3.2.0-m3.jar
+│       │   ├── javax.servlet-api-3.1.0.jar
+│       │   ├── javax.servlet.jsp-2.3.2.jar
+│       │   ├── javax.servlet.jsp-api-2.3.1.jar
+│       │   ├── javolution-5.5.1.jar
+│       │   ├── jaxb-api-2.3.0.jar
+│       │   ├── jcodings-1.0.58.jar
+│       │   ├── jdo-api-3.0.1.jar
+│       │   ├── jersey-client-1.19.4.jar
+│       │   ├── jersey-core-1.19.4.jar
+│       │   ├── jersey-server-1.19.4.jar
+│       │   ├── jersey-servlet-1.19.4.jar
+│       │   ├── jettison-1.5.4.jar
+│       │   ├── jetty-annotations-9.4.57.v20241219.jar
+│       │   ├── jetty-http-9.4.57.v20241219.jar
+│       │   ├── jetty-io-9.4.57.v20241219.jar
+│       │   ├── jetty-jaas-9.4.57.v20241219.jar
+│       │   ├── jetty-jmx-9.4.57.v20241219.jar
+│       │   ├── jetty-jndi-9.4.57.v20241219.jar
+│       │   ├── jetty-plus-9.4.57.v20241219.jar
+│       │   ├── jetty-rewrite-9.4.57.v20241219.jar
+│       │   ├── jetty-runner-9.4.57.v20241219.jar
+│       │   ├── jetty-schemas-3.1.2.jar
+│       │   ├── jetty-security-9.4.57.v20241219.jar
+│       │   ├── jetty-server-9.4.57.v20241219.jar
+│       │   ├── jetty-servlet-9.4.57.v20241219.jar
+│       │   ├── jetty-util-9.4.57.v20241219.jar
+│       │   ├── jetty-util-ajax-9.4.57.v20241219.jar
+│       │   ├── jetty-webapp-9.4.57.v20241219.jar
+│       │   ├── jetty-xml-9.4.57.v20241219.jar
+│       │   ├── jline-2.12.1.jar
+│       │   ├── jline-3.9.0.jar
+│       │   ├── joda-time-2.9.6.jar
+│       │   ├── joni-2.2.1.jar
+│       │   ├── jose4j-0.9.5.jar
+│       │   ├── jpam-1.1.jar
+│       │   ├── json-1.8.jar
+│       │   ├── json-path-2.9.0.jar
+│       │   ├── json-smart-2.4.10.jar
+│       │   ├── jsp-api-2.1.jar
+│       │   ├── jsr305-3.0.2.jar
+│       │   ├── jsr311-api-1.1.1.jar
+│       │   ├── jta-1.1.jar
+│       │   ├── kafka-avro-serializer-7.2.13-80.jar
+│       │   ├── kafka-connect-avro-data-7.2.13-80.jar
+│       │   ├── kafka-connect-hdfs3-1.2.4.jar
+│       │   ├── kafka-connect-storage-common-11.0.34.jar
+│       │   ├── kafka-connect-storage-common-hadoop-shaded-guava-11.0.34.jar
+│       │   ├── kafka-connect-storage-common-hadoop-shaded-protobuf-11.0.34.jar
+│       │   ├── kafka-connect-storage-common-htrace-core4-shaded-11.0.34.jar
+│       │   ├── kafka-connect-storage-core-11.0.34.jar
+│       │   ├── kafka-connect-storage-format-11.0.34.jar
+│       │   ├── kafka-connect-storage-hive-11.0.34.jar
+│       │   ├── kafka-connect-storage-partitioner-11.0.34.jar
+│       │   ├── kafka-connect-storage-wal-11.0.34.jar
+│       │   ├── kafka-schema-converter-7.2.13-80.jar
+│       │   ├── kafka-schema-registry-client-7.2.13-80.jar
+│       │   ├── kafka-schema-serializer-7.2.13-80.jar
+│       │   ├── kerb-admin-2.0.3.jar
+│       │   ├── kerb-client-2.0.3.jar
+│       │   ├── kerb-common-2.0.3.jar
+│       │   ├── kerb-core-2.0.3.jar
+│       │   ├── kerb-crypto-2.0.3.jar
+│       │   ├── kerb-identity-2.0.3.jar
+│       │   ├── kerb-server-2.0.3.jar
+│       │   ├── kerb-simplekdc-2.0.3.jar
+│       │   ├── kerb-util-2.0.3.jar
+│       │   ├── kerby-asn1-2.0.3.jar
+│       │   ├── kerby-config-2.0.3.jar
+│       │   ├── kerby-pkix-2.0.3.jar
+│       │   ├── kerby-util-2.0.3.jar
+│       │   ├── kerby-xdr-2.0.3.jar
+│       │   ├── leveldbjni-all-1.8.jar
+│       │   ├── libfb303-0.9.3.jar
+│       │   ├── libthrift-0.13.0.jar
+│       │   ├── log4j-1.2-api-2.17.1.jar
+│       │   ├── log4j-api-2.17.1.jar
+│       │   ├── log4j-core-2.17.1.jar
+│       │   ├── log4j-slf4j-impl-2.17.1.jar
+│       │   ├── log4j-web-2.17.1.jar
+│       │   ├── logredactor-1.0.12.jar
+│       │   ├── logredactor-metrics-1.0.12.jar
+│       │   ├── memory-0.9.0.jar
+│       │   ├── metrics-core-2.2.0.jar
+│       │   ├── metrics-core-3.2.4.jar
+│       │   ├── metrics-json-3.1.0.jar
+│       │   ├── metrics-jvm-3.1.0.jar
+│       │   ├── mina-core-2.2.4.jar
+│       │   ├── minimal-json-0.9.5.jar
+│       │   ├── netty-all-4.1.118.Final.jar
+│       │   ├── netty-buffer-4.1.118.Final.jar
+│       │   ├── netty-codec-4.1.118.Final.jar
+│       │   ├── netty-codec-dns-4.1.118.Final.jar
+│       │   ├── netty-codec-haproxy-4.1.118.Final.jar
+│       │   ├── netty-codec-http2-4.1.118.Final.jar
+│       │   ├── netty-codec-http-4.1.118.Final.jar
+│       │   ├── netty-codec-memcache-4.1.118.Final.jar
+│       │   ├── netty-codec-mqtt-4.1.118.Final.jar
+│       │   ├── netty-codec-redis-4.1.118.Final.jar
+│       │   ├── netty-codec-smtp-4.1.118.Final.jar
+│       │   ├── netty-codec-socks-4.1.118.Final.jar
+│       │   ├── netty-codec-stomp-4.1.118.Final.jar
+│       │   ├── netty-codec-xml-4.1.118.Final.jar
+│       │   ├── netty-common-4.1.118.Final.jar
+│       │   ├── netty-handler-4.1.118.Final.jar
+│       │   ├── netty-handler-proxy-4.1.118.Final.jar
+│       │   ├── netty-handler-ssl-ocsp-4.1.118.Final.jar
+│       │   ├── netty-resolver-4.1.118.Final.jar
+│       │   ├── netty-resolver-dns-4.1.118.Final.jar
+│       │   ├── netty-resolver-dns-classes-macos-4.1.118.Final.jar
+│       │   ├── netty-resolver-dns-native-macos-4.1.118.Final-osx-aarch_64.jar
+│       │   ├── netty-resolver-dns-native-macos-4.1.118.Final-osx-x86_64.jar
+│       │   ├── netty-tcnative-boringssl-static-2.0.70.Final.jar
+│       │   ├── netty-tcnative-boringssl-static-2.0.70.Final-linux-aarch_64.jar
+│       │   ├── netty-tcnative-boringssl-static-2.0.70.Final-linux-x86_64.jar
+│       │   ├── netty-tcnative-boringssl-static-2.0.70.Final-osx-aarch_64.jar
+│       │   ├── netty-tcnative-boringssl-static-2.0.70.Final-osx-x86_64.jar
+│       │   ├── netty-tcnative-boringssl-static-2.0.70.Final-windows-x86_64.jar
+│       │   ├── netty-tcnative-classes-2.0.70.Final.jar
+│       │   ├── netty-transport-4.1.118.Final.jar
+│       │   ├── netty-transport-classes-epoll-4.1.118.Final.jar
+│       │   ├── netty-transport-classes-kqueue-4.1.118.Final.jar
+│       │   ├── netty-transport-native-epoll-4.1.118.Final.jar
+│       │   ├── netty-transport-native-epoll-4.1.118.Final-linux-aarch_64.jar
+│       │   ├── netty-transport-native-epoll-4.1.118.Final-linux-riscv64.jar
+│       │   ├── netty-transport-native-epoll-4.1.118.Final-linux-x86_64.jar
+│       │   ├── netty-transport-native-kqueue-4.1.118.Final-osx-aarch_64.jar
+│       │   ├── netty-transport-native-kqueue-4.1.118.Final-osx-x86_64.jar
+│       │   ├── netty-transport-native-unix-common-4.1.118.Final.jar
+│       │   ├── netty-transport-rxtx-4.1.118.Final.jar
+│       │   ├── netty-transport-sctp-4.1.118.Final.jar
+│       │   ├── netty-transport-udt-4.1.118.Final.jar
+│       │   ├── nimbus-jose-jwt-9.39.jar
+│       │   ├── opencsv-2.3.jar
+│       │   ├── opentelemetry-api-1.15.0.jar
+│       │   ├── opentelemetry-context-1.15.0.jar
+│       │   ├── opentelemetry-semconv-1.15.0-alpha.jar
+│       │   ├── orc-core-1.5.8.jar
+│       │   ├── orc-shims-1.5.8.jar
+│       │   ├── org.apache.servicemix.bundles.antlr-2.7.7_5.jar
+│       │   ├── parquet-avro-1.11.2.jar
+│       │   ├── parquet-column-1.11.2.jar
+│       │   ├── parquet-common-1.11.2.jar
+│       │   ├── parquet-encoding-1.11.2.jar
+│       │   ├── parquet-format-structures-1.11.2.jar
+│       │   ├── parquet-hadoop-1.11.2.jar
+│       │   ├── parquet-hadoop-bundle-1.10.0.jar
+│       │   ├── protobuf-java-3.25.5.jar
+│       │   ├── protobuf-java-util-3.25.5.jar
+│       │   ├── re2j-1.1.jar
+│       │   ├── reload4j-1.2.25.jar
+│       │   ├── sketches-core-0.9.0.jar
+│       │   ├── slf4j-api-1.7.36.jar
+│       │   ├── slf4j-reload4j-1.7.36.jar
+│       │   ├── snakeyaml-2.0.jar
+│       │   ├── spotbugs-annotations-4.2.0.jar
+│       │   ├── sqlline-1.3.0.jar
+│       │   ├── ST4-4.0.4.jar
+│       │   ├── stax2-api-4.2.jar
+│       │   ├── stax-api-1.0.1.jar
+│       │   ├── swagger-annotations-2.1.10.jar
+│       │   ├── taglibs-standard-impl-1.2.5.jar
+│       │   ├── taglibs-standard-spec-1.2.5.jar
+│       │   ├── tephra-api-0.6.0.jar
+│       │   ├── tephra-core-0.6.0.jar
+│       │   ├── tephra-hbase-compat-1.0-0.6.0.jar
+│       │   ├── token-provider-2.0.3.jar
+│       │   ├── transaction-api-1.1.jar
+│       │   ├── twill-api-0.6.0-incubating.jar
+│       │   ├── twill-common-0.6.0-incubating.jar
+│       │   ├── twill-core-0.6.0-incubating.jar
+│       │   ├── twill-discovery-api-0.6.0-incubating.jar
+│       │   ├── twill-discovery-core-0.6.0-incubating.jar
+│       │   ├── twill-zookeeper-0.6.0-incubating.jar
+│       │   ├── websocket-api-9.4.57.v20241219.jar
+│       │   ├── websocket-client-9.4.57.v20241219.jar
+│       │   ├── websocket-common-9.4.57.v20241219.jar
+│       │   ├── websocket-server-9.4.57.v20241219.jar
+│       │   ├── websocket-servlet-9.4.57.v20241219.jar
+│       │   ├── woodstox-core-5.4.0.jar
+│       │   ├── xml-apis-1.4.01.jar
+│       │   ├── xz-1.9.jar
+│       │   ├── zookeeper-3.9.3.jar
+│       │   └── zookeeper-jute-3.9.3.jar
+│       └── manifest.json
+├── lubuntu_auth_transform.ipynb
+├── models
+│   ├── deepseek-coder-6.7b-base.Q4_K_M.gguf
+│   ├── Lily-7B-Instruct-v0.2.Q5_K_M.gguf
+│   └── llama-2-7b.Q4_K_M.gguf
+├── notebooks
+│   ├── EDA.ipynb
+│   └── lubuntu_auth_transform.ipynb
+├── pgadmin_data
+│   ├── azurecredentialcache
+│   ├── pgadmin4.db
+│   ├── sessions
+│   │   ├── 32c5fc2d-5b22-451c-afba-7e696594878e
+│   │   ├── 5531e8fa-c0e8-4cda-8917-a6ddb1f6b069
+│   │   └── e9040501-2ed9-4374-afaa-081ac7a21920
+│   └── storage
+├── postgres_data  [error opening dir]
+├── requirements.txt
+├── Snowflake
+│   ├── anomalies.sql
+│   ├── auth.sql
+│   ├── feature_tables.sql
+│   ├── synthetic_data.sql
+│   ├── system_metrics.sql
+│   ├── tshark.sql
+│   ├── zeek_capture_loss.sql
+│   ├── zeek_conn.sql
+│   ├── zeek_dns.sql
+│   ├── zeek_http.sql
+│   ├── zeek_notice.sql
+│   └── zeek_ssl.sql
+├── spark-checkpoints
+├── spark-conf
+│   └── log4j.properties
+├── spark-jars
+│   ├── avro-1.11.3.jar
+│   ├── commons-pool2-2.11.1.jar
+│   ├── commons-pool2-2.11.1.jar.1
+│   ├── jackson-annotations-2.15.2.jar
+│   ├── jackson-core-2.15.2.jar
+│   ├── jackson-databind-2.15.2.jar
+│   ├── kafka-clients-3.4.1.jar
+│   ├── parquet-avro-1.12.3.jar
+│   ├── parquet-hadoop-1.12.3.jar
+│   ├── parquet-hadoop-1.12.3.jar.1
+│   ├── snowflake-jdbc-3.23.2.jar
+│   ├── spark-snowflake_2.12-3.1.1.jar
+│   ├── spark-sql-kafka-0-10_2.12-3.5.0.jar
+│   ├── spark-streaming_2.12-3.5.0.jar
+│   └── spark-token-provider-kafka-0-10_2.12-3.5.0.jar
+├── spark-logs
+├── spark-scripts
+│   ├── dns_tunneling_detection.py
+│   ├── spark_dns_tunneling_features.py
+│   ├── start_all_zeek_jobs.sh
+│   ├── system_metrics.py
+│   ├── test.py
+│   ├── transform_auth.py
+│   ├── transform_dmesg.py
+│   ├── transform_kern.py
+│   ├── transform_syslog.py
+│   ├── transform_tshark.py
+│   ├── transform_ufw.py
+│   ├── tshark_test.py
+│   ├── unified_zeek.py
+│   ├── zeek_capture_loss_transform.py
+│   ├── zeek_conn_transform.py
+│   ├── zeek_dns_transform.py
+│   ├── zeek_http_transform.py
+│   ├── zeek_notice_transform.py
+│   ├── zeek_schemas.py
+│   └── zeek_ssl_transform.py
+├── start-hdfs.sh
+└── tree.txt
+
+35 directories, 792 files

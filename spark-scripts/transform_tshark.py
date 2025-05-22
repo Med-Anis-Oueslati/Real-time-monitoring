@@ -21,17 +21,15 @@ spark_jars = [
     "/opt/spark/jars/spark-snowflake_2.12-3.1.1.jar",
     "/opt/spark/jars/jackson-databind-2.15.2.jar",
     "/opt/spark/jars/jackson-core-2.15.2.jar",
-    "/opt/spark/jars/jackson-annotations-2.15.2.jar"
+    "/opt/spark/jars/jackson-annotations-2.15.2.jar",
+    "/opt/spark/jars/parquet-avro-1.12.3.jar",
+    "/opt/spark/jars/parquet-hadoop-1.12.3.jar",
+    "/opt/spark/jars/avro-1.11.3.jar"
 ]
 spark = SparkSession.builder \
-    .appName("LogProcessing") \
-    .config("spark.executor.memory", "4g") \
-    .config("spark.executor.cores", "4") \
-    .config("spark.driver.memory", "4g") \
-    .config("spark.kafka.consumer.pollTimeoutMs", "60000") \
-    .config("spark.streaming.stopGracefullyOnShutdown", "true") \
-    .config("spark.dynamicAllocation.enabled", "false") \
-    .config("spark.jars", ",".join(spark_jars)) \
+    .appName("TsharkToSnowflake") \
+    .config("spark.dynamicAllocation.enabled", "true") \
+    .config("spark.ui.port", "4057") \
     .getOrCreate()
 
 # Broadcast GeoLite2 database path (unchanged)
@@ -74,6 +72,7 @@ kafka_df = spark \
     .option("kafka.bootstrap.servers", "kafka:9092") \
     .option("subscribe", "lubuntu_tshark") \
     .option("startingOffsets", "latest") \
+    .option("kafka.group.id", "lubuntu_tshark_group") \
     .option("kafka.session.timeout.ms", "10000") \
     .option("kafka.heartbeat.interval.ms", "3000") \
     .option("kafka.max.poll.records", "500") \
@@ -204,21 +203,33 @@ snowflake_options = {
     "sfSchema": os.getenv("SNOWFLAKE_SCHEMA"),
     "sfWarehouse": os.getenv("SNOWFLAKE_WAREHOUSE"),
     "sfRole": os.getenv("SNOWFLAKE_ROLE"),
-    "dbtable": os.getenv("SNOWFLAKE_TABLE")
+    "dbtable": "TSHARK"
 }
 
 
-# Output to console
+# Write to Snowflake and console
 def write_to_snowflake(batch_df, batch_id):
-    batch_df.write \
-        .format("snowflake") \
-        .options(**snowflake_options) \
-        .option("dbtable", "LOG_data") \
-        .mode("append") \
-        .save()
+    logger.info(f"Processing batch {batch_id} with {batch_df.count()} records")
+    if batch_df.count() > 0:
+        # Show output in console
+        batch_df.show(truncate=False)
+        # Write to Snowflake
+        try:
+            batch_df.write \
+                .format("snowflake") \
+                .options(**snowflake_options) \
+                .option("dbtable", "TSHARK") \
+                .option("sfOnError", "CONTINUE") \
+                .mode("append") \
+                .save()
+        except Exception as e:
+            logger.error(f"Failed to write batch {batch_id} to Snowflake: {e}")
+    else:
+        logger.info("No records in batch")
 
 query = enriched_df.writeStream \
     .outputMode("append") \
+    .trigger(processingTime="10 seconds") \
     .foreachBatch(write_to_snowflake) \
     .start()
 

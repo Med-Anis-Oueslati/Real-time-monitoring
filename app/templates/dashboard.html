@@ -2,17 +2,21 @@
 
 {% block content %}
 <div class="dashboard-container">
-  <h2>Welcome to Falcon Dashboard</h2>
+  <h2>Welcome, {{ user.username }}</h2>
   <div class="cards">
     <div class="card">
       <h3>Real-Time Monitoring</h3>
       <p>View live security events and alerts.</p>
-      <a href="#" class="btn primary">Go</a>
+      <a href="http://localhost:3000/d/bf971542-ff80-43b5-b4a3-03a93cedf8de/real-time-monitoring?orgId=1&from=2025-05-12T00:00:00.000Z&to=2025-05-18T00:00:00.000Z&timezone=browser&var-Hostname=anis-virtualbox&var-VM_ID=lubuntu-vm1&var-Year=2025&var-Month=5&var-Day=16&refresh=5s&var-query0=DNS&var-Traffic_Type=OTHER" 
+           target="_blank" 
+           rel="noopener noreferrer">
+            <button class="btn primary">GO</button>
+        </a>
     </div>
     <div class="card">
-      <h3>Threat Analysis</h3>
-      <p>Analyze detected threats and anomalies.</p>
-      <a href="#" class="btn primary">Go</a>
+      <h3>Conversational Agent</h3>
+      <p>Ask questions using natural language.</p>
+      <button id="go-streamlit" class="btn primary">Go</button>
     </div>
     <div class="card">
       <h3>Incident Response</h3>
@@ -21,4 +25,20 @@
     </div>
   </div>
 </div>
+<script>
+  document.getElementById("go-streamlit").addEventListener("click", function() {
+  fetch("/start-streamlit", { method: "POST" })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === "started" || data.status === "already_running") {
+        window.open("http://localhost:8501/", "_blank");
+      } else {
+        alert("Failed to start the chatbot app. Please try again.");
+      }
+    })
+    .catch(() => {
+      alert("Error contacting the server.");
+    });
+});
+</script>
 {% endblock %}

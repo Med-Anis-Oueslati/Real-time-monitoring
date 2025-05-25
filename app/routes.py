@@ -1,7 +1,12 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session,jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
-from .forms import SignUpForm, LoginForm
-
+from app.forms  import SignUpForm, LoginForm, LogoutForm
+from .models import User
+from . import db
+import subprocess
+import time
+import requests
+from . import csrf# Add this if not already in your app init
 main = Blueprint('main', __name__)
 
 # Dummy user store (in memory)
@@ -15,11 +20,15 @@ def home():
 def signup():
     form = SignUpForm()
     if form.validate_on_submit():
+        username = form.username.data.strip()
         email = form.email.data.lower()
-        if email in users:
-            flash('Email already registered.', 'error')
+        if User.query.filter((User.email == email) | (User.username == username)).first():
+            flash('Username or email already taken.', 'error')
         else:
-            users[email] = generate_password_hash(form.password.data)
+            hashed_pw = generate_password_hash(form.password.data)
+            new_user = User(username=username, email=email, password_hash=hashed_pw)
+            db.session.add(new_user)
+            db.session.commit()
             flash('Account created! Please log in.', 'success')
             return redirect(url_for('main.login'))
     return render_template('signup.html', form=form)
@@ -30,8 +39,9 @@ def login():
     if form.validate_on_submit():
         email = form.email.data.lower()
         password = form.password.data
-        user_hash = users.get(email)
-        if user_hash and check_password_hash(user_hash, password):
+        user = User.query.filter_by(email=email).first()
+        if user and check_password_hash(user.password_hash, password):
+            session['user_id'] = user.email
             flash('Logged in successfully!', 'success')
             return redirect(url_for('main.dashboard'))
         else:
@@ -39,7 +49,39 @@ def login():
     return render_template('login.html', form=form)
 @main.route('/dashboard')
 def dashboard():
-    # Add login check if needed:
     if 'user_id' not in session:
         return redirect(url_for('main.login'))
-    return render_template('dashboard.html')
+    user = User.query.filter_by(email=session['user_id']).first()
+    logout_form = LogoutForm()
+    return render_template('dashboard.html', user=user, logout_form=logout_form)
+
+@main.route('/logout', methods=['POST'])
+def logout():
+    session.pop('user_id', None)
+    flash('You have been logged out.', 'success')
+    return redirect(url_for('main.home'))
+
+
+def is_streamlit_running():
+    try:
+        r = requests.get("http://localhost:8501")
+        return r.status_code == 200
+    except requests.ConnectionError:
+        return False
+
+@main.route('/start-streamlit', methods=['POST'])
+def start_streamlit():
+    if is_streamlit_running():
+        return jsonify({"status": "already_running"})
+
+    command = ["streamlit", "run", "/home/anis/PFE/agents/conversational_chatbot.py"]
+    subprocess.Popen(command)
+    time.sleep(2)
+
+    if is_streamlit_running():
+        return jsonify({"status": "started"})
+    else:
+        return jsonify({"status": "failed"})
+
+# ✅ Exempt it from CSRF protection
+csrf.exempt(start_streamlit)

@@ -8,14 +8,20 @@
 </head>
 <body>
     <div class="container">
-        <nav class="navbar">
-            <h1 class="logo">Falcon</h1>
+        <nav class="navbar">          
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Falcon Logo" class="logo-img">
             <div class="nav-links">
-                <a href="{{ url_for('main.login') }}">Log In</a>
-                <a href="{{ url_for('main.signup') }}" class="signup-btn">Sign Up</a>
+                {% if session.get('user_id') %}
+                    <form action="{{ url_for('main.logout') }}" method="POST" style="display:inline;">
+                        {{ logout_form.csrf_token }}
+                        <button type="submit" class="signup-btn">Log Out</button>
+                    </form>
+                {% else %}
+                    <a href="{{ url_for('main.login') }}">Log In</a>
+                    <a href="{{ url_for('main.signup') }}" class="signup-btn">Sign Up</a>
+                {% endif %}
             </div>
         </nav>
-
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         <ul class="flashes">

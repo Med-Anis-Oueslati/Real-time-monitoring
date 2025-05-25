@@ -382,3 +382,24 @@ label {
 .card .btn:hover {
   background-color: #1a4bba;
 }
+
+.signup-btn {
+  border: 2px solid #bbdefb;
+  padding: 10px 20px;
+  border-radius: 30px;
+  background: transparent;
+  color: #bbdefb;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s, color 0.3s;
+}
+
+.signup-btn:hover {
+  background-color: #bbdefb;
+  color: #0d47a1;
+}
+
+.logo-img {
+    height: 140px; /* adjust as needed */
+    vertical-align: middle;
+}

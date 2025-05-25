@@ -167,7 +167,7 @@ The Snowflake database contains the following tables in SPARK_DB.SPARK_SCHEMA:
 7. ANOMALIES
    -TIMESTAMP (STRING) : Timestamp of the anomaly
    -ATTACK_TYPE (STRING) : Attack type
-   -DESCIPTION (STRING) : Description of the cyberattack
+   -DESCIPTION (STRING) : Description of the cyberattack where the ptotocol was used
    -SRC_IP (STRING) : Source IP address
    -DST_IP (STRING) : Destination IP address
    -INSERTED_AT (TIMESTAMP_NTZ) : Timestamp when the anomaly was inserted into the database

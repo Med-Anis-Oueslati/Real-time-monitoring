@@ -10,10 +10,6 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 import json
 import logging
-import pika
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -22,7 +18,7 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
-# Snowflake, OpenAI, and Email configuration
+# Snowflake and OpenAI configuration
 SNOWFLAKE_USER = os.getenv("SNOWFLAKE_USER")
 SNOWFLAKE_PASSWORD = os.getenv("SNOWFLAKE_PASSWORD")
 SNOWFLAKE_ACCOUNT = os.getenv("SNOWFLAKE_ACCOUNT")
@@ -30,11 +26,6 @@ SNOWFLAKE_WAREHOUSE = os.getenv("SNOWFLAKE_WAREHOUSE")
 SNOWFLAKE_DATABASE = os.getenv("SNOWFLAKE_DATABASE")
 SNOWFLAKE_SCHEMA = os.getenv("SNOWFLAKE_SCHEMA")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-EMAIL_SENDER = os.getenv("EMAIL_SENDER")
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
-EMAIL_RECEIVER = os.getenv("EMAIL_RECEIVER")
-SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 
 # File to store last processed timestamp
 LAST_TIMESTAMP_FILE = "last_processed_timestamp.txt"
@@ -44,79 +35,6 @@ class IncidentDescription(BaseModel):
     src_ip: Optional[str] = Field(description="Source IP address of the anomaly, if applicable", default=None)
     dst_ip: Optional[str] = Field(description="Destination IP address of the anomaly, if applicable", default=None)
     details: dict = Field(description="Additional details about the anomaly", default={})
-
-class AnomalyPublisher:
-    def __init__(self, rabbitmq_host: str = "localhost", queue_name: str = "anomaly_queue"):
-        self.rabbitmq_host = rabbitmq_host
-        self.queue_name = queue_name
-        self.connection = None
-        self.channel = None
-        self._connect()
-
-    def _connect(self):
-        """Establish connection to RabbitMQ server."""
-        try:
-            self.connection = pika.BlockingConnection(
-                pika.ConnectionParameters(host=self.rabbitmq_host)
-            )
-            self.channel = self.connection.channel()
-            self.channel.queue_declare(queue=self.queue_name, durable=True)
-            logger.info(f"Connected to RabbitMQ at {self.rabbitmq_host}")
-        except Exception as e:
-            logger.error(f"Error connecting to RabbitMQ: {e}")
-            raise
-
-    def publish_anomalies(self, summaries: List[dict]):
-        """Publish anomaly summaries to RabbitMQ queue."""
-        if not summaries:
-            logger.warning("No summaries to publish")
-            return
-
-        for summary in summaries:
-            try:
-                message = json.dumps(summary)
-                self.channel.basic_publish(
-                    exchange="",
-                    routing_key=self.queue_name,
-                    body=message,
-                    properties=pika.BasicProperties(delivery_mode=2)  # Persistent messages
-                )
-                logger.info(f"Published anomaly: {message}")
-            except Exception as e:
-                logger.error(f"Error publishing anomaly: {e}")
-
-    def close(self):
-        """Close RabbitMQ connection."""
-        if self.connection and not self.connection.is_closed:
-            self.connection.close()
-            logger.info("RabbitMQ connection closed")
-
-def format_summaries_for_publishing(log_lines: List[str]) -> List[dict]:
-    """Format cyber attack summaries from log lines for RabbitMQ publishing."""
-    summaries = []
-    current_summary = None
-    for line in log_lines:
-        line = line.strip()
-        if line.startswith("Attack Type:"):
-            if current_summary:
-                summaries.append(current_summary)
-            current_summary = {"attack_type": line.split(": ", 1)[1].strip()}
-        elif current_summary and line.startswith("  - "):
-            try:
-                key, value = line[4:].split(": ", 1)
-                key = key.lower().replace(" ", "_")
-                current_summary[key] = value.strip()
-            except ValueError:
-                current_summary.setdefault("details", "")
-                current_summary["details"] += f"; {line[4:].strip()}"
-        elif current_summary:
-            current_summary.setdefault("details", "")
-            current_summary["details"] += f"; {line.strip()}"
-    if current_summary:
-        summaries.append(current_summary)
-    
-    logger.debug(f"Formatted summaries: {json.dumps(summaries, indent=2)}")
-    return summaries
 
 class AnomalyDetectionAgent:
     def __init__(self):
@@ -140,65 +58,17 @@ class AnomalyDetectionAgent:
         # Initialize OpenAI LLM
         if not OPENAI_API_KEY:
             raise ValueError("OpenAI API Key not found.")
-        self.llm = ChatOpenAI(model="gpt-3.5-turbo", api_key=OPENAI_API_KEY)
+        self.llm = ChatOpenAI(model="gpt-4o-mini", api_key=OPENAI_API_KEY)
         self.parser = PydanticOutputParser(pydantic_object=IncidentDescription)
         self.prompt = self._create_prompt()
-
-        # Validate email configuration
-        if not all([EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_RECEIVER]):
-            logger.warning("Email configuration incomplete. Email notifications disabled.")
-            self.email_enabled = False
-        else:
-            self.email_enabled = True
 
         # Load last processed timestamp
         self.last_timestamp = self._load_last_timestamp()
 
-
-    def _store_anomalies(self, incidents: List[IncidentDescription], end_time: str):
-        """Store detected anomalies in the Snowflake ANOMALIES table."""
-        from decimal import Decimal
-        import json
-
-        def convert_decimals(obj):
-            """Recursively convert Decimal to float or int."""
-            if isinstance(obj, Decimal):
-                return float(obj) if obj != obj.to_integral_value() else int(obj)
-            elif isinstance(obj, dict):
-                return {k: convert_decimals(v) for k, v in obj.items()}
-            elif isinstance(obj, list):
-                return [convert_decimals(item) for item in obj]
-            return obj
-
-        try:
-            cursor = self.conn.cursor()
-            query = """
-            INSERT INTO SPARK_DB.SPARK_SCHEMA.ANOMALIES
-            (TIMESTAMP, ATTACK_TYPE, DESCRIPTION, SRC_IP, DST_IP)
-            VALUES (%s, %s, %s, %s, %s)
-            """
-            for incident in incidents:
-                attack_type = incident.details.get("type", "Unknown")
-                details = convert_decimals(incident.details)
-                data = (
-                    end_time,
-                    attack_type,
-                    incident.description,
-                    incident.src_ip or None,
-                    incident.dst_ip or None,
-                )
-                cursor.execute(query, data)
-                logger.info(f"Stored anomaly in Snowflake: {attack_type}")
-            self.conn.commit()
-        except Exception as e:
-            logger.error(f"Error storing anomalies in Snowflake: {e}")
-            self.conn.rollback()
-            raise
-        finally:
-            cursor.close()
-
     def _create_prompt(self):
-        """Create a LangChain prompt for LLM-based anomaly detection."""
+        """
+        Create a LangChain prompt for LLM-based anomaly detection.
+        """
         template = """
         You are a cybersecurity expert analyzing network logs from a SIEM system to detect potential cyberattacks.
         The logs include data from Zeek (zeek_notice, zeek_http, zeek_conn, zeek_capture_loss, zeek_dns) and tshark.
@@ -207,9 +77,9 @@ class AnomalyDetectionAgent:
         Guidelines:
         - Analyze the provided log data: {log_data}
         - Log fields include:
-          - zeek_notice: TIMESTAMP, ID_ORIG_H, ID_RESP_H, NOTE, MSG
+          - zeek_notice: TIMESTAMP, ID_ORIG_H (source IP), ID_RESP_H (destination IP), NOTE (e.g., Custom::DNS_Tunneling), MSG (details)
           - zeek_http: TIMESTAMP, ID_ORIG_H, ID_RESP_H, RESPONSE_BODY_LEN, USER_AGENT, STATUS_CODE
-          - zeek_conn: TIMESTAMP, ID_ORIG_H, ID_RESP_H, RESP_BYTES, DURATION, ID_RESP_P
+          - zeek_conn: TIMESTAMP, ID_ORIG_H, ID_RESP_H, RESP_BYTES, DURATION, ID_RESP_P (destination port)
           - zeek_capture_loss: TIMESTAMP, PERCENT_LOST, GAPS, ACKS
           - zeek_dns: TIMESTAMP, ID_ORIG_H, ID_RESP_H, QUERY, QTYPE_NAME
           - tshark: FRAME_TIME, IP_SRC, IP_DST, TCP_PORT, UDP_PORT
@@ -229,7 +99,9 @@ class AnomalyDetectionAgent:
         return ChatPromptTemplate.from_template(template).partial(format_instructions=self.parser.get_format_instructions())
 
     def _load_last_timestamp(self) -> str:
-        """Load the last processed timestamp from file, or default to 24 hours ago."""
+        """
+        Load the last processed timestamp from file, or default to 24 hours ago.
+        """
         try:
             if os.path.exists(LAST_TIMESTAMP_FILE):
                 with open(LAST_TIMESTAMP_FILE, 'r') as f:
@@ -243,16 +115,19 @@ class AnomalyDetectionAgent:
         return default_timestamp
 
     def _save_last_timestamp(self, timestamp: str):
-        """Save the latest timestamp to file."""
+        """
+        Save the latest timestamp to file.
+        """
         try:
             with open(LAST_TIMESTAMP_FILE, 'w') as f:
                 f.write(timestamp)
         except Exception as e:
             print(f"[-] Error saving last timestamp: {e}")
-            logger.error(f"Error saving last timestamp: {e}")
-
+    
     def _get_date_filters(self, start_time: str, end_time: str):
-        """Extract YEAR, MONTH, DAY for query filters based on timestamp range."""
+        """
+        Extract YEAR, MONTH, DAY for query filters based on timestamp range.
+        """
         start_dt = datetime.strptime(start_time, '%Y-%m-%d %H:%M:%S')
         end_dt = datetime.strptime(end_time, '%Y-%m-%d %H:%M:%S')
         return {
@@ -264,45 +139,10 @@ class AnomalyDetectionAgent:
             'end_day': end_dt.day
         }
 
-    def send_email_notification(self, llm_summary: str, incidents: List[IncidentDescription], end_time: str):
-        """Send an email notification with anomaly details."""
-        if not self.email_enabled:
-            logger.warning("Email notifications disabled due to incomplete configuration.")
-            return
-
-        try:
-            msg = MIMEMultipart()
-            msg['From'] = EMAIL_SENDER
-            msg['To'] = EMAIL_RECEIVER
-            msg['Subject'] = f"Cybersecurity Anomaly Alert - {end_time}"
-
-            body = f"Network Anomalies Detected ({end_time})\n\n"
-            body += "Summary of Detected Anomalies:\n"
-            body += llm_summary + "\n\n"
-            body += "Detailed Incidents:\n"
-            for i, incident in enumerate(incidents, 1):
-                body += f"Incident {i}:\n"
-                body += f"  - Type: {incident.details.get('type', 'Unknown')}\n"
-                body += f"  - Description: {incident.description}\n"
-                body += f"  - Source IP: {incident.src_ip or 'None'}\n"
-                body += f"  - Destination IP: {incident.dst_ip or 'None'}\n"
-                body += f"  - Details: {json.dumps(incident.details, indent=2)}\n\n"
-
-            msg.attach(MIMEText(body, 'plain'))
-
-            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-            server.starttls()
-            server.login(EMAIL_SENDER, EMAIL_PASSWORD)
-            server.sendmail(EMAIL_SENDER, EMAIL_RECEIVER, msg.as_string())
-            server.quit()
-            logger.info("Email notification sent successfully.")
-            print("[+] Email notification sent successfully.")
-        except Exception as e:
-            logger.error(f"Error sending email notification: {e}")
-            print(f"[-] Error sending email notification: {e}")
-
     def query_dns_tunneling(self, start_time: str, end_time: str) -> list:
-        """Rule-based detection for DNS tunneling from zeek_notice."""
+        """
+        Rule-based detection for DNS tunneling from zeek_notice.
+        """
         try:
             cursor = self.conn.cursor()
             date_filters = self._get_date_filters(start_time, end_time)
@@ -346,7 +186,9 @@ class AnomalyDetectionAgent:
             cursor.close()
 
     def query_suspicious_http(self, start_time: str, end_time: str) -> list:
-        """Rule-based detection for suspicious HTTP traffic."""
+        """
+        Rule-based detection for suspicious HTTP traffic.
+        """
         try:
             cursor = self.conn.cursor()
             date_filters = self._get_date_filters(start_time, end_time)
@@ -394,7 +236,9 @@ class AnomalyDetectionAgent:
             cursor.close()
 
     def query_data_exfiltration(self, start_time: str, end_time: str) -> list:
-        """Rule-based detection for data exfiltration."""
+        """
+        Rule-based detection for data exfiltration.
+        """
         try:
             cursor = self.conn.cursor()
             date_filters = self._get_date_filters(start_time, end_time)
@@ -436,12 +280,15 @@ class AnomalyDetectionAgent:
             cursor.close()
 
     def query_packet_loss_dos(self, start_time: str, end_time: str) -> list:
-        """Rule-based detection for TCP-based DoS attacks in ZEEK_CONN."""
+        """
+        Rule-based detection for TCP-based DoS attacks in ZEEK_CONN.
+        """
         try:
             cursor = self.conn.cursor()
             date_filters = self._get_date_filters(start_time, end_time)
             incidents = []
 
+            # Query ZEEK_CONN for high packet volumes or incomplete handshakes
             dos_query = """
             SELECT 
                 DATE_TRUNC('minute', TIMESTAMP) AS minute_timestamp,
@@ -492,7 +339,9 @@ class AnomalyDetectionAgent:
             cursor.close()
 
     def query_unauthorized_access(self, start_time: str, end_time: str) -> list:
-        """Rule-based detection for unauthorized access."""
+        """
+        Rule-based detection for unauthorized access.
+        """
         try:
             cursor = self.conn.cursor()
             date_filters = self._get_date_filters(start_time, end_time)
@@ -526,7 +375,6 @@ class AnomalyDetectionAgent:
                 if isinstance(port, str) and ',' in port:
                     ports = port.split(',')
                     port = ports[1] if ports[0] not in ('80', '443') else ports[0]
-                port = int(float(port)) if isinstance(port, (str, float)) else int(port)
                 description = (
                     f"Unauthorized access attempt from {src_ip} to {dst_ip} on port {port} "
                     f"at {timestamp}"
@@ -546,7 +394,9 @@ class AnomalyDetectionAgent:
             cursor.close()
 
     def query_syn_flood(self, start_time: str, end_time: str) -> list:
-        """Rule-based detection for SYN flood attacks."""
+        """
+        Rule-based detection for SYN flood attacks.
+        """
         try:
             cursor = self.conn.cursor()
             date_filters = self._get_date_filters(start_time, end_time)
@@ -584,7 +434,9 @@ class AnomalyDetectionAgent:
             cursor.close()
 
     def query_system_strain(self, start_time: str, end_time: str) -> list:
-        """Rule-based detection for system strain."""
+        """
+        Rule-based detection for system strain.
+        """
         try:
             cursor = self.conn.cursor()
             date_filters = self._get_date_filters(start_time, end_time)
@@ -625,12 +477,15 @@ class AnomalyDetectionAgent:
             cursor.close()
 
     def query_logs_for_llm(self, start_time: str, end_time: str) -> dict:
-        """Query a small, filtered set of logs for LLM analysis."""
+        """
+        Query a small, filtered set of logs for LLM analysis.
+        """
         try:
             cursor = self.conn.cursor()
             date_filters = self._get_date_filters(start_time, end_time)
             logs = {}
 
+            # Query zeek_notice for suspicious events
             cursor.execute("""
                 SELECT TIMESTAMP, ID_ORIG_H, ID_RESP_H, MSG, NOTE
                 FROM SPARK_DB.SPARK_SCHEMA.ZEEK_NOTICE
@@ -646,6 +501,7 @@ class AnomalyDetectionAgent:
             logs["zeek_notice"] = cursor.fetchall()
             logger.info(f"LLM zeek_notice query returned {len(logs['zeek_notice'])} records")
 
+            # Query zeek_http for suspicious HTTP
             cursor.execute("""
                 SELECT TIMESTAMP, ID_ORIG_H, ID_RESP_H, RESPONSE_BODY_LEN, USER_AGENT, STATUS_CODE
                 FROM SPARK_DB.SPARK_SCHEMA.ZEEK_HTTP
@@ -661,6 +517,7 @@ class AnomalyDetectionAgent:
             logs["zeek_http"] = cursor.fetchall()
             logger.info(f"LLM zeek_http query returned {len(logs['zeek_http'])} records")
 
+            # Query zeek_conn for high data transfers, non-standard ports, or incomplete handshakes
             cursor.execute("""
                 SELECT TIMESTAMP, ID_ORIG_H, ID_RESP_H, RESP_BYTES, DURATION, ID_RESP_P
                 FROM SPARK_DB.SPARK_SCHEMA.ZEEK_CONN
@@ -676,6 +533,7 @@ class AnomalyDetectionAgent:
             logs["zeek_conn"] = cursor.fetchall()
             logger.info(f"LLM zeek_conn query returned {len(logs['zeek_conn'])} records")
 
+            # Query zeek_capture_loss for high packet loss
             cursor.execute("""
                 SELECT TIMESTAMP, PERCENT_LOST
                 FROM SPARK_DB.SPARK_SCHEMA.ZEEK_CAPTURE_LOSS
@@ -691,6 +549,7 @@ class AnomalyDetectionAgent:
             logs["zeek_capture_loss"] = cursor.fetchall()
             logger.info(f"LLM zeek_capture_loss query returned {len(logs['zeek_capture_loss'])} records")
 
+            # Query zeek_dns for long queries
             cursor.execute("""
                 SELECT TIMESTAMP, ID_ORIG_H, ID_RESP_H, QUERY
                 FROM SPARK_DB.SPARK_SCHEMA.ZEEK_DNS
@@ -706,6 +565,7 @@ class AnomalyDetectionAgent:
             logs["zeek_dns"] = cursor.fetchall()
             logger.info(f"LLM zeek_dns query returned {len(logs['zeek_dns'])} records")
 
+            # Query tshark for non-standard ports
             cursor.execute("""
                 SELECT FRAME_TIME, IP_SRC, IP_DST, TCP_PORT
                 FROM SPARK_DB.SPARK_SCHEMA.TSHARK
@@ -730,7 +590,9 @@ class AnomalyDetectionAgent:
             cursor.close()
 
     def llm_analyze_logs(self, log_data: dict) -> IncidentDescription:
-        """Use LLM to analyze a small set of logs and detect anomalies."""
+        """
+        Use LLM to analyze a small set of logs and detect anomalies.
+        """
         try:
             chain = self.prompt | self.llm | self.parser
             result = chain.invoke({"log_data": json.dumps(log_data, default=str)})
@@ -742,8 +604,11 @@ class AnomalyDetectionAgent:
             return IncidentDescription(description="", src_ip=None, dst_ip=None, details={})
 
     def llm_summarize_incidents(self, incidents: List[IncidentDescription]) -> str:
-        """Use LLM to generate a natural-language summary of all detected incidents."""
+        """
+        Use LLM to generate a natural-language summary of all detected incidents.
+        """
         try:
+            # Prepare incident data for LLM
             incident_data = [
                 {
                     "description": incident.description,
@@ -754,6 +619,7 @@ class AnomalyDetectionAgent:
                 } for incident in incidents
             ]
             
+            # Create prompt for summary
             template = """
             You are a cybersecurity expert summarizing detected network anomalies for a mitigation team.
             Given the following list of incidents, generate a concise, actionable summary in natural language:
@@ -777,19 +643,9 @@ class AnomalyDetectionAgent:
             return "Failed to generate LLM summary due to an error."
 
     def detect_anomalies(self, start_time: str, end_time: str):
-        """Detect anomalies using both rule-based and LLM-based methods."""
-        from decimal import Decimal
-
-        def convert_decimals(obj):
-            """Recursively convert Decimal to int or float in dictionaries."""
-            if isinstance(obj, Decimal):
-                return int(obj) if obj == obj.to_integral_value() else float(obj)
-            elif isinstance(obj, dict):
-                return {k: convert_decimals(v) for k, v in obj.items()}
-            elif isinstance(obj, list):
-                return [convert_decimals(item) for item in obj]
-            return obj
-
+        """
+        Detect anomalies using both rule-based and LLM-based methods.
+        """
         logger.info(f"Detecting anomalies from {start_time} to {end_time}")
 
         # Update last timestamp
@@ -810,7 +666,9 @@ class AnomalyDetectionAgent:
         llm_incident = None
         if log_data:
             llm_incident = self.llm_analyze_logs(log_data)
+            # Only append if description indicates an actual anomaly
             if llm_incident.description and "no anomalies" not in llm_incident.description.lower():
+                # Assign a type to LLM incident based on description
                 if "data exfiltration" in llm_incident.description.lower():
                     llm_incident.details["type"] = "Data_Exfiltration"
                     logger.info("Assigned LLM incident type: Data_Exfiltration")
@@ -833,8 +691,12 @@ class AnomalyDetectionAgent:
             logger.info("No anomalies detected")
             return
 
-        # Store anomalies in Snowflake
-        self._store_anomalies(incidents, end_time)
+        # # Print detailed incidents
+        # print("[+] Detected anomalies (prompts for mitigation agent):")
+        # logger.info(f"Detected {len(incidents)} anomalies")
+        # for incident in incidents:
+        #     print(f"  - {incident.description}")
+        #     logger.info(f"Anomaly: {incident.description}")
 
         # Print LLM-specific summary if an LLM anomaly was detected
         if llm_incident and llm_incident.description and "no anomalies" not in llm_incident.description.lower():
@@ -850,39 +712,14 @@ class AnomalyDetectionAgent:
         llm_summary = self.llm_summarize_incidents(incidents)
         print(llm_summary)
 
-        # Send email notification
-        self.send_email_notification(llm_summary, incidents, end_time)
-
-        # Publish anomalies to RabbitMQ
-        try:
-            publisher = AnomalyPublisher()
-            summary_message = {
-                "type": "summary",
-                "summary": llm_summary,
-                "timestamp": end_time
-            }
-            publisher.publish_anomalies([summary_message])
-            incident_messages = [
-                {
-                    "type": incident.details.get("type", "Unknown"),
-                    "description": incident.description,
-                    "src_ip": incident.src_ip or "None",
-                    "dst_ip": incident.dst_ip or "None",
-                    "details": convert_decimals(incident.details),
-                    "timestamp": end_time
-                } for incident in incidents
-            ]
-            publisher.publish_anomalies(incident_messages)
-            publisher.close()
-        except Exception as e:
-            logger.error(f"Error publishing anomalies to RabbitMQ: {e}")
-            print(f"[-] Error publishing anomalies to RabbitMQ: {e}")
-
     def run(self):
-        """Main loop to monitor logs and detect anomalies."""
+        """
+        Main loop to monitor logs and detect anomalies.
+        """
         try:
             print("[+] Anomaly detection agent started. Monitoring logs...")
             logger.info("Anomaly detection agent started")
+            # Use last processed timestamp as start time, end time as now
             end_time = (datetime.now() - timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S')
             start_time = self.last_timestamp
 

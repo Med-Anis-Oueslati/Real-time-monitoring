@@ -7,14 +7,23 @@ from typing import List
 from dotenv import load_dotenv
 import re
 import os
+import pika
+import json
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
 
 # Static configuration
-ATTACKED_VM_IP = "10.71.0.162"
+ATTACKED_VM_IP = "172.20.10.5"
 SUDO_PASSWORD = "root"
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+RABBITMQ_HOST = "localhost"
+QUEUE_NAME = "anomaly_queue"
 
 class MitigationAction(BaseModel):
     commands: List[str] = Field(description="List of Linux commands to execute for mitigation")
@@ -27,18 +36,45 @@ class MitigationAgent:
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
             self.ssh_client.connect(ATTACKED_VM_IP, username="anis", key_filename="/home/anis/.ssh/id_rsa")
-            print(f"[+] SSH connection to {ATTACKED_VM_IP} established successfully.")
+            logger.info(f"SSH connection to {ATTACKED_VM_IP} established successfully.")
         except Exception as e:
-            print(f"[-] Error connecting to VM: {e}")
+            logger.error(f"Error connecting to VM: {e}")
             raise
 
         if not OPENAI_API_KEY:
             raise ValueError("OpenAI API Key not found. Please set OPENAI_API_KEY environment variable.")
 
+        # Initialize RabbitMQ connection
+        self.rabbitmq_connection = None
+        self.rabbitmq_channel = None
+        self._connect_rabbitmq()
+
         # Initialize LangChain with OpenAI
         self.llm = ChatOpenAI(model="gpt-4o-mini", api_key=OPENAI_API_KEY)
         self.parser = PydanticOutputParser(pydantic_object=MitigationAction)
         self.prompt = self._create_prompt()
+
+    def _connect_rabbitmq(self):
+        """Establish connection to RabbitMQ server with retry logic."""
+        max_retries = 3
+        retry_delay = 5  # seconds
+        for attempt in range(max_retries):
+            try:
+                self.rabbitmq_connection = pika.BlockingConnection(
+                    pika.ConnectionParameters(host=RABBITMQ_HOST)
+                )
+                self.rabbitmq_channel = self.rabbitmq_connection.channel()
+                self.rabbitmq_channel.queue_declare(queue=QUEUE_NAME, durable=True)
+                logger.info(f"Connected to RabbitMQ at {RABBITMQ_HOST}")
+                return
+            except Exception as e:
+                logger.error(f"Error connecting to RabbitMQ (attempt {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    logger.info(f"Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                else:
+                    logger.error("Max retries reached. Failed to connect to RabbitMQ.")
+                    raise
 
     def _create_prompt(self):
         """
@@ -47,18 +83,21 @@ class MitigationAgent:
         template = """
         You are a cybersecurity assistant tasked with analyzing descriptions of security incidents on a Linux system running UFW (Uncomplicated Firewall) as the primary firewall manager.
         Your goal is to propose a set of safe and effective Linux commands to mitigate the described incident.
-        The commands will be executed via SSH on a Linux VM. The agent will automatically handle 'sudo' authentication for commands requiring elevated privileges, so do NOT include 'sudo' or any password-related prefixes (e.g., 'echo "<password>" | sudo -S') in your commands.
+        The commands will be executed via SSH on a Linux VM. The agent will automatically handle 'sudo' authentication, so do NOT include 'sudo' or password-related prefixes in your commands.
 
         Guidelines:
-        - For blocking IP addresses, use:
+        - For blocking IP addresses (e.g., TCP DoS), use:
           - 'ufw insert 1 deny from <IP>' to block all traffic from the IP.
-          - 'ufw insert 1 deny proto icmp from <IP>' to explicitly block ICMP traffic (e.g., pings).
-          - Always include 'ufw reload' after modifying UFW rules.
-        - If the incident description specifies an IPv6 address, use 'ufw insert 1 deny from <IPv6>' and 'ufw insert 1 deny proto icmp from <IPv6>' for IPv6 blocking.
-        - For other mitigations (e.g., killing a process, disabling a user, restarting a service), use appropriate Linux commands (e.g., 'kill -9 <PID>', 'usermod -L <user>', 'systemctl restart <service>').
-        - Do NOT include 'sudo' in the commands; the agent will add it as needed.
-        - Ensure commands are safe and avoid destructive actions (e.g., do not suggest 'rm -rf /', do not modify critical system files without clear justification).
-        - If the description is unclear or insufficient, return an empty list of commands and explain why in the description field.
+          - 'ufw reload' to apply changes (omit if disk space is an issue).
+        - For unauthorized access on specific ports, use:
+          - 'ufw insert 1 deny from <IP> to any port <PORT>' to block traffic to the port from the IP.
+          - 'ufw reload' to apply changes (omit if disk space is an issue).
+        - For suspicious HTTP traffic, suggest:
+          - 'ufw insert 1 deny from <IP> to any port 80' or 'port 443' if IPs are provided.
+          - Log analysis commands like 'grep "<IP>" /var/log/apache2/access.log' if no IPs are provided.
+        - Do NOT include 'sudo' in the commands.
+        - Ensure commands are safe and avoid destructive actions (e.g., no 'rm -rf /').
+        - If the description lacks details (e.g., no IP or port), return an empty command list and explain why in the description field.
         - Provide a brief description of the proposed mitigation action.
 
         Return the result in the following JSON format:
@@ -77,7 +116,7 @@ class MitigationAgent:
             result = chain.invoke({"input_description": incident_description})
             return result
         except Exception as e:
-            print(f"[-] Error generating action: {e}")
+            logger.error(f"Error generating action: {e}")
             return MitigationAction(commands=[], description="Failed to generate mitigation action due to parsing error.")
 
     def validate_command(self, command: str) -> bool:
@@ -85,7 +124,6 @@ class MitigationAgent:
         Validate that a command is safe to execute.
         Returns True if safe, False if potentially dangerous.
         """
-        # Block dangerous patterns (e.g., recursive deletes, reboots, etc.)
         dangerous_patterns = [
             r"rm\s+-rf\s+/",  # Prevent 'rm -rf /'
             r"reboot",        # Prevent system reboots
@@ -96,7 +134,7 @@ class MitigationAgent:
         ]
         for pattern in dangerous_patterns:
             if re.search(pattern, command, re.IGNORECASE):
-                print(f"[-] Command blocked for safety: {command}")
+                logger.warning(f"Command blocked for safety: {command}")
                 return False
         return True
 
@@ -111,85 +149,135 @@ class MitigationAgent:
                 return True
             elif choice in ["no", "n"]:
                 return False
-            print("Invalid input. Please enter 'yes' or 'no'.")
+            logger.warning("Invalid input. Please enter 'yes' or 'no'.")
 
     def execute_mitigation_action(self, action: MitigationAction):
         """
         Execute the dynamically generated mitigation commands on the VM with sudo password.
         """
         if not action.commands:
-            print(f"[-] No commands to execute: {action.description}")
+            logger.warning(f"No commands to execute: {action.description}")
             return
 
-        print(f"[+] Proposed mitigation: {action.description}")
-        print("[*] Commands to execute:")
+        logger.info(f"Proposed mitigation: {action.description}")
+        logger.info("Commands to execute:")
         for cmd in action.commands:
-            print(f"  - {cmd}")
+            logger.info(f"  - {cmd}")
 
         if not self.confirm_action("Do you want to execute these commands?"):
-            print("[*] Mitigation action canceled.")
+            logger.info("Mitigation action canceled.")
             return
 
         safe_password = SUDO_PASSWORD.replace("'", "'\\''")
         for command in action.commands:
             if not self.validate_command(command):
-                print(f"[-] Skipping unsafe command: {command}")
+                logger.warning(f"Skipping unsafe command: {command}")
                 continue
 
-            # Prefix all commands with sudo and password
-            full_command = f"echo '{safe_password}' | sudo -S {command}"
+            # Skip ufw reload if disk space is likely an issue
+            if command == "ufw reload":
+                try:
+                    stdin, stdout, stderr = self.ssh_client.exec_command("df -h /tmp")
+                    output = stdout.read().decode()
+                    error = stderr.read().decode()
+                    if error or "100%" in output:
+                        logger.warning("Skipping 'ufw reload' due to potential disk space issues.")
+                        continue
+                except Exception as e:
+                    logger.error(f"Error checking disk space: {e}")
+                    continue
 
-            print(f"[*] Executing command: {full_command.replace(safe_password, '****')}")
+            full_command = f"echo '{safe_password}' | sudo -S {command}"
+            logger.info(f"Executing command: {full_command.replace(safe_password, '****')}")
             try:
                 stdin, stdout, stderr = self.ssh_client.exec_command(full_command)
                 exit_status = stdout.channel.recv_exit_status()
                 output = stdout.read().decode()
                 error = stderr.read().decode()
                 if exit_status != 0:
-                    print(f"[-] Command failed with exit status {exit_status}: {error}")
+                    logger.error(f"Command failed with exit status {exit_status}: {error}")
                 else:
-                    print(f"[+] Command executed successfully: {output or 'No output'}")
+                    logger.info(f"Command executed successfully: {output or 'No output'}")
             except Exception as e:
-                print(f"[-] Error executing command: {e}")
+                logger.error(f"Error executing command: {e}")
 
-    def run(self):
-        """
-        Main loop to process incident descriptions and generate mitigation actions.
-        """
+    def callback(self, ch, method, properties, body):
+        """Callback function to process messages from RabbitMQ."""
         try:
-            print(f"[+] Connected to VM at {ATTACKED_VM_IP}. Waiting for incident descriptions...")
-            print("[*] Enter a description of the security incident (e.g., 'Suspicious traffic from 10.71.0.120' or 'Process 1234 is malicious').")
-            while True:
-                incident_description = input("\nEnter incident description: ").strip()
-                if not incident_description:
-                    print("[-] Empty input. Please enter a valid description.")
-                    continue
+            message = json.loads(body.decode())
+            logger.info(f"Received anomaly: {message}")
 
-                if not self.confirm_action("Do you want to proceed with analyzing this incident?"):
-                    print("[*] Incident analysis canceled.")
-                    continue
+            # Determine if it's a summary or incident message
+            if message.get('type') == 'summary':
+                incident_description = (
+                    f"Summary Report:\n"
+                    f"Description: {message.get('summary', 'No summary provided')}\n"
+                    f"Timestamp: {message.get('timestamp', 'N/A')}"
+                )
+            else:
+                incident_description = (
+                    f"Attack Type: {message.get('type', 'Unknown')}\n"
+                    f"Description: {message.get('description', 'No description provided')}\n"
+                    f"Source IP: {message.get('src_ip', 'None')}\n"
+                    f"Destination IP: {message.get('dst_ip', 'None')}\n"
+                    f"Details: {json.dumps(message.get('details', {}), indent=2)}\n"
+                    f"Timestamp: {message.get('timestamp', 'N/A')}"
+                )
 
+            logger.info(f"Processing incident: {incident_description}")
+            if self.confirm_action("Do you want to proceed with analyzing this incident?"):
                 action = self.generate_action(incident_description)
-                print(f"[+] Inferred mitigation: {action.description}")
+                logger.info(f"Inferred mitigation: {action.description}")
                 if action.commands:
-                    print("[*] Proposed commands:")
+                    logger.info("Proposed commands:")
                     for cmd in action.commands:
-                        print(f"  - {cmd}")
+                        logger.info(f"  - {cmd}")
                 else:
-                    print("[-] No mitigation commands proposed.")
+                    logger.warning("No mitigation commands proposed.")
 
                 if action.commands and self.confirm_action("Do you want to execute these mitigation commands?"):
                     self.execute_mitigation_action(action)
                 else:
-                    print("[*] Mitigation action skipped.")
-        except KeyboardInterrupt:
-            print("\n[!] Stopping mitigation agent...")
-        finally:
-            self.ssh_client.close()
+                    logger.info("Mitigation action skipped.")
+            else:
+                logger.info("Incident analysis canceled.")
 
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+        except Exception as e:
+            logger.error(f"Error processing message: {e}")
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+            # Attempt to reconnect to RabbitMQ
+            logger.info("Attempting to reconnect to RabbitMQ...")
+            try:
+                self._connect_rabbitmq()
+            except Exception as reconnect_e:
+                logger.error(f"Reconnection failed: {reconnect_e}")
+                raise
+
+    def run(self):
+        """
+        Main loop to consume incident descriptions from RabbitMQ and generate mitigation actions.
+        """
+        try:
+            logger.info(f"Connected to VM at {ATTACKED_VM_IP} and RabbitMQ at {RABBITMQ_HOST}. Listening for anomalies...")
+            self.rabbitmq_channel.basic_consume(
+                queue=QUEUE_NAME,
+                on_message_callback=self.callback
+            )
+            self.rabbitmq_channel.start_consuming()
+        except KeyboardInterrupt:
+            logger.info("Stopping mitigation agent...")
+        except Exception as e:
+            logger.error(f"Error in main loop: {e}")
+        finally:
+            if self.rabbitmq_connection and not self.rabbitmq_connection.is_closed:
+                self.rabbitmq_connection.close()
+                logger.info("RabbitMQ connection closed")
+            self.ssh_client.close()
+            logger.info("SSH connection closed")
 if __name__ == "__main__":
     try:
         agent = MitigationAgent()
         agent.run()
     except Exception as e:
-        print(f"[!] Failed to initialize mitigation agent: {e}")
+        logger.error(f"Failed to initialize mitigation agent: {e}")

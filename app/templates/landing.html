@@ -1,0 +1,15 @@
+<!-- templates/landing.html -->
+{% extends "base.html" %}
+{% block content %}
+<main class="hero">
+    <h2 id="dynamic-slogan">Real-Time Security <br> Intelligent Monitoring</h2>
+    <p id="dynamic-subtext">Falcon helps you stay ahead of cyber threats with advanced threat detection and automation.</p>
+    <div class="hero-buttons">
+    <div class="hero-buttons">
+        <a href="{{ url_for('main.login') }}" class="btn secondary">Get Started</a>
+        <a href="{{ url_for('main.signup') }}" class="btn secondary">Create Account</a>
+    </div>
+    </div>
+    
+</main>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "landing.html" %}
+
+{% block content %}
+<h2>Available Virtual Machines</h2>
+
+<div class="cards">
+  <div class="card">
+    <h3>Lubuntu VM</h3>
+    <button class="btn primary" onclick="startMonitoring('lubuntu')">Start Monitoring</button>
+  </div>
+  <div class="card">
+    <h3>Kali Linux VM</h3>
+    <button class="btn primary" onclick="startMonitoring('kali')">Start Monitoring</button>
+  </div>
+</div>
+
+<script>
+function startMonitoring(vm) {
+  fetch("/start-monitoring", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ vm: vm })  // sends either 'kali' or 'lubuntu'
+  })
+  .then(res => {
+    return res.text().then(text => {
+      console.log("Raw response text:", text);
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        throw new Error("Invalid JSON: " + text);
+      }
+    });
+  })
+  .then(data => {
+    console.log("Parsed JSON:", data);
+    if(data.status) alert(data.status);
+    else alert("Error: " + data.message);
+  })
+  .catch(err => alert("Fetch error: " + err));
+}
+</script>
+
+{% endblock %}

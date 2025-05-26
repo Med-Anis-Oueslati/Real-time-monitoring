@@ -6,7 +6,9 @@ from . import db
 import subprocess
 import time
 import requests
-from . import csrf# Add this if not already in your app init
+import paramiko
+from . import csrf
+
 main = Blueprint('main', __name__)
 
 # Dummy user store (in memory)
@@ -85,3 +87,59 @@ def start_streamlit():
 
 # ✅ Exempt it from CSRF protection
 csrf.exempt(start_streamlit)
+
+
+@main.route("/vm-monitoring")
+def vm_monitoring():
+    return render_template("vm_monitoring.html")
+
+def execute_commands_on_vm(ip, username, password):
+    try:
+        print(f"Connecting to {ip} with user {username}")
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(ip, username=username, password=password)
+        print("✅ SSH connected")
+
+        ssh.exec_command("sudo /opt/zeek/bin/zeekctl deploy")
+        time.sleep(5)
+        ssh.exec_command("sudo fluentd -c /etc/fluentd.conf -v")
+
+        ssh.close()
+        print("✅ Commands executed successfully")
+        return True
+    except Exception as e:
+        print(f"[SSH ERROR] {e}")
+        return False
+
+@main.route("/start-monitoring", methods=["POST"])
+@csrf.exempt
+def start_monitoring():
+    print("📥 Received request to /start-monitoring")
+
+    data = request.get_json()
+    print(f"➡️  Parsed JSON: {data}")
+
+    vm = data.get("vm")
+    print(f"🖥️  VM requested: {vm}")
+
+    try:
+        if vm == "lubuntu":
+            print("🔧 Starting Lubuntu monitoring...")
+            success = execute_commands_on_vm("10.71.0.162", "anis", "root")
+        elif vm == "kali":
+            print("🔧 Starting Kali monitoring...")
+            success = execute_commands_on_vm("10.71.0.120", "kali", "kali")
+        else:
+            print("❌ Unknown VM")
+            return jsonify({"status": "error", "message": "Unknown VM"}), 400
+
+        print(f"✅ Command execution result: {success}")
+
+        if success:
+            return jsonify({"status": "started"})
+        else:
+            return jsonify({"status": "failed"})
+    except Exception as e:
+        print(f"[❗ ERROR] VM Start Failed: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500

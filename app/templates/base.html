@@ -9,11 +9,12 @@
 <body>
     <div class="container">
         <nav class="navbar">          
-                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Falcon Logo" class="logo-img">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Falcon Logo" class="logo-img">
             <div class="nav-links">
-                {% if session.get('user_id') %}
+                {# Use current_user from Flask-Login #}
+                {% if current_user.is_authenticated %}
                     <form action="{{ url_for('main.logout') }}" method="POST" style="display:inline;">
-                        {{ logout_form.csrf_token }}
+                        {{ logout_form.csrf_token }} {# Keep csrf_token for form submission #}
                         <button type="submit" class="signup-btn">Log Out</button>
                     </form>
                 {% else %}
@@ -34,5 +35,12 @@
 
         {% block content %}{% endblock %}
     </div>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script>
+        function getCSRFToken() {
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            return csrfMeta ? csrfMeta.content : '';
+}
+    </script>
 </body>
 </html>

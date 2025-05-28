@@ -45,29 +45,49 @@ class MitigationAgent:
         Create a LangChain prompt for generating mitigation actions as Linux commands.
         """
         template = """
-        You are a cybersecurity assistant tasked with analyzing descriptions of security incidents on a Linux system running UFW (Uncomplicated Firewall) as the primary firewall manager.
-        Your goal is to propose a set of safe and effective Linux commands to mitigate the described incident.
-        The commands will be executed via SSH on a Linux VM. The agent will automatically handle 'sudo' authentication for commands requiring elevated privileges, so do NOT include 'sudo' or any password-related prefixes (e.g., 'echo "<password>" | sudo -S') in your commands.
+        You are an advanced cybersecurity assistant tasked with analyzing security incident descriptions on a Linux system and generating precise, safe, and effective mitigation commands to stop attacks, particularly DoS and SYN flood attacks. The system uses UFW (Uncomplicated Firewall) for firewall management and supports iptables for advanced rules. Commands will be executed via SSH on a Linux VM. The agent automatically handles 'sudo' authentication, so do NOT include 'sudo' or password-related prefixes (e.g., 'echo "<password>" | sudo -S') in your commands.
 
-        Guidelines:
-        - For blocking IP addresses, use:
-          - 'ufw insert 1 deny from <IP>' to block all traffic from the IP.
-          - 'ufw insert 1 deny proto icmp from <IP>' to explicitly block ICMP traffic (e.g., pings).
-          - Always include 'ufw reload' after modifying UFW rules.
-        - If the incident description specifies an IPv6 address, use 'ufw insert 1 deny from <IPv6>' and 'ufw insert 1 deny proto icmp from <IPv6>' for IPv6 blocking.
-        - For other mitigations (e.g., killing a process, disabling a user, restarting a service), use appropriate Linux commands (e.g., 'kill -9 <PID>', 'usermod -L <user>', 'systemctl restart <service>').
-        - Do NOT include 'sudo' in the commands; the agent will add it as needed.
-        - Ensure commands are safe and avoid destructive actions (e.g., do not suggest 'rm -rf /', do not modify critical system files without clear justification).
-        - If the description is unclear or insufficient, return an empty list of commands and explain why in the description field.
-        - Provide a brief description of the proposed mitigation action.
+        ### Guidelines:
+        - **Attack Types**: Prioritize DoS attacks (e.g., SYN flood, UDP flood, ICMP flood), but also handle:
+          - Malware/Processes (e.g., kill processes, quarantine files).
+          - Authentication attacks (e.g., lock users, update SSH configs).
+          - Resource abuse (e.g., limit processes, check for crypto miners).
+          - System vulnerabilities (e.g., close ports, update packages).
+        - **Command Specificity**:
+          - **DoS Mitigation (e.g., SYN Flood)**:
+            - For DoS attacks with a known attacker IP, insert a high-priority UFW rule: `ufw insert 1 deny from <IP> to any` to block all traffic from the IP across all ports and protocols.
+            - Use iptables for SYN flood protection, inserting rules at the top: `iptables -I INPUT -p tcp --syn -s <IP> -m connlimit --connlimit-above 20 -j DROP` to limit concurrent connections per IP, and `iptables -I INPUT -p tcp --syn -m limit --limit 5/second --limit-burst 10 -j ACCEPT` with `iptables -I INPUT -p tcp --syn -j DROP` for global SYN rate-limiting.
+            - Tune kernel parameters for SYN floods: `sysctl -w net.ipv4.tcp_syncookies=1`, `sysctl -w net.ipv4.tcp_max_syn_backlog=4096`, `sysctl -w net.ipv4.tcp_synack_retries=1`.
+            - For UDP or ICMP floods, use `ufw insert 1 deny proto udp from <IP>` or `ufw insert 1 deny proto icmp from <IP>`.
+            - Suggest installing Fail2Ban for dynamic blocking: `apt update && apt install -y fail2ban && systemctl enable fail2ban && systemctl start fail2ban`.
+            - Suggest diagnostics: `tcpdump -i any -n host <IP> -c 100`, `iptables -L -n -v`, `ufw status`, `netstat -s | grep -i syn`.
+          - **IP Blocking (IPv4/IPv6)**:
+            - Use `ufw insert 1 deny from <IP> to any` for immediate blocking, ensuring high priority.
+            - For specific ports, use `ufw insert 1 deny from <IP> to any port <port> proto <protocol>`.
+          - For process mitigation, use `kill -9 <PID>` or `pkill -f <process_name>`.
+          - For user mitigation, use `usermod -L <user>` or `passwd -l <user>`.
+          - For service issues, use `systemctl stop/restart <service>`.
+        - **Safety**:
+          - Avoid destructive commands (e.g., `rm -rf /`, `mkfs`, `dd`, `reboot`, `shutdown`).
+          - Do not modify critical system files (e.g., `/etc/passwd`, `/etc/shadow`) unless justified.
+          - Avoid broad rules (e.g., `ufw deny from 0.0.0.0/0`).
+          - Clear conflicting rules: `iptables -F INPUT` and `ufw reset` (with caution) if needed.
+          - Validate commands to ensure they target specific threats.
+        - **Context Awareness**:
+          - Assume common Linux services (e.g., SSH, Apache, Nginx, MySQL).
+          - Tailor commands to the incident (e.g., prioritize SYN flood mitigation for TCP-based DoS).
+          - If attack details are unclear, include diagnostics (e.g., `tcpdump -i any host <IP> -n -c 100`, `grep <IP> /var/log/syslog`).
+        - **Fallback**:
+          - If the description is vague, return diagnostic commands (e.g., `tcpdump`, `ss -tuln`, `lsof -i`) and explain in the description.
+          - If no mitigation is possible, return an empty command list with an explanation.
 
-        Return the result in the following JSON format:
+        ### JSON Output Format:
         {format_instructions}
 
-        Input description: {input_description}
+        ### Input Description:
+        {input_description}
         """
         return ChatPromptTemplate.from_template(template).partial(format_instructions=self.parser.get_format_instructions())
-
     def generate_action(self, incident_description: str) -> MitigationAction:
         """
         Generate a structured mitigation action with Linux commands from the incident description.

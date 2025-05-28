@@ -1,42 +1,288 @@
-{% extends "landing.html" %}
+{% extends "base.html" %}
 
 {% block content %}
 <h2>Available Virtual Machines</h2>
 
 <div class="cards">
-  <div class="card">
-    <h3>Lubuntu VM</h3>
-    <button class="btn primary" onclick="startMonitoring('lubuntu')">Start Monitoring</button>
-  </div>
-  <div class="card">
-    <h3>Kali Linux VM</h3>
-    <button class="btn primary" onclick="startMonitoring('kali')">Start Monitoring</button>
-  </div>
+  {% if vms %}
+    {% for vm in vms %}
+    <div class="card" id="vm-{{ vm.short_name }}">
+      <h3>{{ vm.name }}</h3>
+      <p>IP Address: <span id="ip-{{ vm.short_name }}">{{ vm.ip_address }}</span></p> {# Display current IP #}
+      <p>Current Status: <span id="status-{{ vm.short_name }}">Checking...</span></p>
+      <div class="card-buttons">
+        <button id="monitor-{{ vm.short_name }}" class="btn primary" onclick="toggleMonitoring('{{ vm.short_name }}')">Start Monitoring</button> <br><br>
+        <button class="btn primary" onclick="shutdownVM('{{ vm.short_name }}')">Shutdown</button><br><br>
+        <button class="btn secondary" onclick="openEditIPModal('{{ vm.short_name }}', '{{ vm.ip_address }}')">Edit IP</button> {# NEW: Edit IP button #}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <p>No virtual machines configured yet. Please add VMs through the backend.</p>
+  {% endif %}
 </div>
 
+{# NEW: Edit IP Modal/Form (no changes) #}
+<div id="editIPModal" class="modal">
+  <div class="modal-content form-container">
+    <span class="close-button" onclick="closeEditIPModal()">&times;</span>
+    <h2>Edit VM IP Address</h2>
+    <form id="editIPForm" method="POST" action="{{ url_for('main.update_vm_ip') }}">
+        {{ edit_form.hidden_tag() }}
+        <input type="hidden" id="modal-vm-short-name" name="vm_short_name" value="">
+        <div class="form-group">
+            {{ edit_form.ip_address(size=15, placeholder=" ") }}
+            {{ edit_form.ip_address.label }}
+            {% if edit_form.ip_address.errors %}
+                <ul class="errors">
+                    {% for error in edit_form.ip_address.errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ edit_form.submit(class_="btn primary") }}
+        </div>
+    </form>
+    <div id="edit-ip-feedback" class="flashes" style="display:none;"></div>
+  </div>
+</div>
+<style>
+  /* Basic Modal CSS (add to style.css for cleaner separation later) */
+  .modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 100; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
+    padding-top: 60px;
+  }
+  .modal-content {
+    background: rgba(255, 255, 255, 0.15); /* Slightly lighter background than form-container */
+    margin: 5% auto; /* 5% from the top and centered */
+    padding: 20px;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 16px;
+    width: 80%; /* Could be responsive */
+    max-width: 500px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    position: relative;
+  }
+  .close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .close-button:hover,
+  .close-button:focus {
+    color: white;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .modal .form-group {
+    margin-bottom: 1.5rem; /* Adjust spacing inside modal form */
+  }
+  .modal .btn.primary {
+    width: auto; /* Don't make modal buttons full width */
+    padding: 10px 25px;
+  }
+</style>
+
+
 <script>
-function startMonitoring(vm) {
-  fetch("/start-monitoring", {
+// Existing monitoringState, toggleMonitoring, shutdownVM functions (no changes to logic here)
+const monitoringState = {}; 
+
+document.addEventListener("DOMContentLoaded", () => {
+    {% if vms %}
+        {% for vm in vms %}
+        monitoringState['{{ vm.short_name }}'] = false;
+        {% endfor %}
+    {% endif %}
+    checkVMStatus();
+    setInterval(checkVMStatus, 2000);
+
+    // NEW: Handle Edit IP form submission via AJAX
+    document.getElementById('editIPForm').addEventListener('submit', function(event) {
+        event.preventDefault(); // Prevent default form submission
+        const form = this;
+        const feedbackDiv = document.getElementById('edit-ip-feedback');
+        feedbackDiv.style.display = 'none'; // Hide previous feedback
+
+        fetch(form.action, {
+            method: form.method,
+            body: new FormData(form), // Use FormData to send form data
+            headers: {
+                // Ensure CSRF token is sent if @csrf.exempt is removed from the backend
+                // "X-CSRFToken": document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success") {
+                feedbackDiv.className = "flashes success";
+                feedbackDiv.innerText = data.message;
+                feedbackDiv.style.display = 'block';
+                // Update the displayed IP on the card
+                const vmShortName = document.getElementById('modal-vm-short-name').value;
+                document.getElementById(`ip-${vmShortName}`).innerText = form.elements['ip_address'].value;
+                checkVMStatus(); // Re-check status after IP change
+                setTimeout(closeEditIPModal, 2000); // Close modal after 2 seconds
+            } else {
+                feedbackDiv.className = "flashes error";
+                feedbackDiv.innerText = data.message;
+                if (data.errors) {
+                    for (const field in data.errors) {
+                        feedbackDiv.innerText += `\n${field}: ${data.errors[field].join(', ')}`;
+                    }
+                }
+                feedbackDiv.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Error updating IP:', error);
+            feedbackDiv.className = "flashes error";
+            feedbackDiv.innerText = "Network error or server unreachable.";
+            feedbackDiv.style.display = 'block';
+        });
+    });
+});
+
+// NEW: Modal functions
+function openEditIPModal(vmShortName, currentIp) {
+    const modal = document.getElementById('editIPModal');
+    document.getElementById('modal-vm-short-name').value = vmShortName;
+    document.getElementById('ip_address').value = currentIp; // Set current IP in the input field
+    document.getElementById('edit-ip-feedback').style.display = 'none'; // Clear previous feedback
+    document.getElementById('edit-ip-feedback').innerText = ''; // Clear previous text
+    modal.style.display = 'block';
+}
+
+function closeEditIPModal() {
+    document.getElementById('editIPModal').style.display = 'none';
+}
+
+// Close the modal if the user clicks outside of it
+window.onclick = function(event) {
+  const modal = document.getElementById('editIPModal');
+  if (event.target == modal) {
+    modal.style.display = "none";
+  }
+}
+
+// The rest of the functions (toggleMonitoring, shutdownVM, updateCardUI, checkVMStatus)
+// remain largely the same, but ensure they refer to vmShortName as the identifier
+// and that `updateCardUI` also updates the displayed IP if needed.
+
+function toggleMonitoring(vmShortName) {
+  const action = monitoringState[vmShortName] ? "stop-monitoring" : "start-monitoring";
+  fetch(`/${action}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ vm: vm })  // sends either 'kali' or 'lubuntu'
+    body: JSON.stringify({ vm: vmShortName })
   })
-  .then(res => {
-    return res.text().then(text => {
-      console.log("Raw response text:", text);
-      try {
-        return JSON.parse(text);
-      } catch (e) {
-        throw new Error("Invalid JSON: " + text);
-      }
-    });
-  })
+  .then(response => response.json())
   .then(data => {
-    console.log("Parsed JSON:", data);
-    if(data.status) alert(data.status);
-    else alert("Error: " + data.message);
+    if (data.status === "started" || data.status === "stopped") {
+      monitoringState[vmShortName] = (data.status === "started");
+      updateCardUI(vmShortName, data.status === "started" ? 'monitoring' : 'online'); // Update UI
+      alert(`${vmShortName} monitoring ${data.status}`);
+    } else {
+      alert(`Error: ${data.message || 'Unknown error'}`);
+    }
+    checkVMStatus();
   })
-  .catch(err => alert("Fetch error: " + err));
+  .catch(err => {
+    console.error("Fetch error:", err);
+    alert("Error contacting the server or network issue: " + err.message);
+  });
+}
+
+function shutdownVM(vmShortName) {
+  if (!confirm(`Are you sure you want to shut down ${vmShortName}?`)) return;
+
+  fetch("/shutdown-vm", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ vm: vmShortName })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === "shutdown") {
+      alert(`${vmShortName} has been shut down`);
+      updateCardUI(vmShortName, 'offline'); // Update UI directly
+    } else {
+      alert(`Shutdown failed: ${data.message || 'Unknown error'}`);
+    }
+    checkVMStatus();
+  })
+  .catch(err => {
+    console.error("Fetch error:", err);
+    alert("Error contacting the server or network issue: " + err.message);
+  });
+}
+
+function updateCardUI(vmShortName, currentStatus) {
+  const card = document.getElementById(`vm-${vmShortName}`);
+  const statusSpan = document.getElementById(`status-${vmShortName}`);
+  const monitorButton = document.getElementById(`monitor-${vmShortName}`);
+  const ipSpan = document.getElementById(`ip-${vmShortName}`);
+
+  if (!card || !statusSpan || !monitorButton || !ipSpan) return;
+
+  // Clear all status classes first
+  card.classList.remove('vm-online', 'vm-offline', 'vm-monitoring');
+
+  // Apply the correct class and update button text/state
+  if (currentStatus === 'online') {
+    card.classList.add('vm-online');
+    statusSpan.innerText = 'Online';
+    monitorButton.innerText = 'Start Monitoring';
+    monitoringState[vmShortName] = false;
+    monitorButton.disabled = false;
+  } else if (currentStatus === 'monitoring') {
+    card.classList.add('vm-monitoring'); // Correct class for monitoring state
+    statusSpan.innerText = 'Monitoring';
+    monitorButton.innerText = 'Stop Monitoring'; // Correct button text
+    monitoringState[vmShortName] = true;
+    monitorButton.disabled = false;
+  } else if (currentStatus === 'offline') {
+    card.classList.add('vm-offline');
+    statusSpan.innerText = 'Offline';
+    monitorButton.innerText = 'Offline'; // Button text for offline state
+    monitoringState[vmShortName] = false;
+    monitorButton.disabled = true; // Button disabled when offline
+  }
+  // Any other status (e.g., 'Error Fetching Status') will fall through,
+  // the button will remain as is or be disabled by checkVMStatus catch block.
+}
+
+function checkVMStatus() {
+  fetch('/active-vms')
+    .then(res => res.json())
+    .then(statuses => {
+      for (const vmShortName in statuses) {
+        if (statuses.hasOwnProperty(vmShortName)) {
+          updateCardUI(vmShortName, statuses[vmShortName]);
+        }
+      }
+    })
+    .catch(err => {
+      console.error("Failed to fetch VM status:", err);
+      {% if vms %}
+        {% for vm in vms %}
+        document.getElementById(`status-{{ vm.short_name }}`).innerText = "Error Fetching Status";
+        document.getElementById(`monitor-{{ vm.short_name }}`).disabled = true;
+        {% endfor %}
+      {% endif %}
+    });
 }
 </script>
 

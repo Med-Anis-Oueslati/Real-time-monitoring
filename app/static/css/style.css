@@ -403,3 +403,32 @@ label {
     height: 140px; /* adjust as needed */
     vertical-align: middle;
 }
+
+.vm-online {
+  border-left: 6px solid #4caf50; /* Green indicator bar */
+  background-color: rgba(76, 175, 80, 0.1); /* Light green tint */
+  border: 2px solid #4caf50;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease, border-left 0.3s ease;
+}
+
+.vm-offline {
+  border-left: 6px solid #f44336; /* Red indicator bar */
+  background-color: rgba(244, 67, 54, 0.1); /* Light red tint */
+  border: 2px solid #f44336;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease, border-left 0.3s ease;
+}
+
+/* NEW (Optional): For VMs currently in monitoring state */
+.vm-monitoring {
+  border-left: 6px solid #ffc107; /* Amber indicator bar */
+  background-color: rgba(255, 193, 7, 0.1); /* Light amber tint */
+  border: 2px solid #ffc107;
+  box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3); /* Add a subtle glow */
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease, border-left 0.3s ease;
+}
+
+/* Ensure consistent hover for all card types */
+.card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 10px 25px rgba(0, 100, 255, 0.6);
+}

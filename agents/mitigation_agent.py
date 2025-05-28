@@ -10,6 +10,7 @@ import os
 import pika
 import json
 import logging
+import time
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

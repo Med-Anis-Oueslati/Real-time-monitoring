@@ -171,4 +171,25 @@ The Snowflake database contains the following tables in SPARK_DB.SPARK_SCHEMA:
    -SRC_IP (STRING) : Source IP address
    -DST_IP (STRING) : Destination IP address
    -INSERTED_AT (TIMESTAMP_NTZ) : Timestamp when the anomaly was inserted into the database
+
+8. TSHARK
+   -FRAME_TIME (TIMESTAMP_NTZ): Timestamp of the frame
+   -IP_SRC (STRING): Source IP address
+   -IP_DST (STRING): Destination IP address
+   -UDP_PORT (STRING): UDP port number
+   -TCP_PORT (STRING): TCP port number
+   -IP_PROTO (STRING): IP protocol type
+   -SRC_LATITUDE (STRING): Source latitude
+   -SRC_LONGITUDE (STRING): Source longitude
+   -SRC_CITY (STRING): Source city
+   -DST_LATITUDE (STRING): Destination latitude
+   -DST_LONGITUDE (STRING): Destination longitude
+   -DST_CITY (STRING): Destination city
+   -YEAR (INTEGER): Year of the frame
+   -MONTH (INTEGER): Month of the frame
+   -DAY (INTEGER): Day of the frame
+   -HOUR (INTEGER): Hour of the frame
+   -MINUTE (INTEGER): Minute of the frame
+   -SECOND (INTEGER): Second of the frame
+   -TRAFFIC_TYPE (STRING): Type of traffic (e.g., HTTP, DNS, etc.)
 """

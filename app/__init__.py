@@ -6,6 +6,9 @@ from .forms import LogoutForm
 from flask_socketio import SocketIO
 import os
 
+# NEW: Import MitigationUtility
+from .mitigation_utils import MitigationUtility
+
 db = SQLAlchemy()
 csrf = CSRFProtect()
 login_manager = LoginManager() # Initialize LoginManager
@@ -30,6 +33,20 @@ def create_app():
         # This function is called by Flask-Login to reload the user object
         # from the user ID stored in the session.
         return User.query.get(int(user_id))
+
+    # NEW: Initialize MitigationUtility and attach it to the app object
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+    if not OPENAI_API_KEY:
+        print("WARNING: OPENAI_API_KEY environment variable not set. Mitigation agent functionality may be limited.")
+        app.mitigation_utility = None
+    else:
+        try:
+            app.mitigation_utility = MitigationUtility(openai_api_key=OPENAI_API_KEY)
+            print("MitigationUtility initialized successfully and attached to app.")
+        except Exception as e:
+            print(f"Error initializing MitigationUtility: {e}")
+            app.mitigation_utility = None
 
     from .routes import main
     app.register_blueprint(main)

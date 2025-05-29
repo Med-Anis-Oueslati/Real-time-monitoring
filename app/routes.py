@@ -12,17 +12,26 @@ import paramiko
 from threading import Thread, Lock
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_socketio import emit
+from sqlalchemy.orm import sessionmaker
+import os 
 
-from sqlalchemy.orm import sessionmaker, scoped_session
+# FIX: Changed import statement from 'from mitigation_utils' to 'from .mitigation_utils'
+from .mitigation_utils import MitigationUtility, MitigationAction
 
+# Create a Blueprint for main routes
 main = Blueprint('main', __name__)
+
+# Removed global mitigation_utility and setup_mitigation_utility as it's now handled in __init__.py
+
 
 @main.route('/')
 def home():
+    """Renders the landing page."""
     return render_template('landing.html')
 
 @main.route('/signup', methods=['GET', 'POST'])
 def signup():
+    """Handles user signup."""
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
     form = SignUpForm()
@@ -42,6 +51,7 @@ def signup():
 
 @main.route('/login', methods=['GET', 'POST'])
 def login():
+    """Handles user login."""
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
     form = LoginForm()
@@ -61,19 +71,23 @@ def login():
 @main.route('/dashboard')
 @login_required
 def dashboard():
+    """Renders the user dashboard."""
     logout_form = LogoutForm()
     return render_template('dashboard.html', user=current_user, logout_form=logout_form)
 
 @main.route('/logout', methods=['POST'])
 @login_required
 def logout():
+    """Logs out the current user."""
     logout_user()
     flash('You have been logged out.', 'success')
     return redirect(url_for('main.home'))
 
+
 ### Streamlit Integration
 
 def is_streamlit_running():
+    """Checks if the Streamlit application is running."""
     try:
         r = requests.get("http://localhost:8501")
         return r.status_code == 200
@@ -84,13 +98,14 @@ def is_streamlit_running():
 @login_required
 @csrf.exempt
 def start_streamlit():
+    """Starts the Streamlit chatbot application."""
     if is_streamlit_running():
         return jsonify({"status": "already_running"})
 
     command = ["streamlit", "run", "/home/anis/PFE/agents/conversational_chatbot.py"]
     try:
         subprocess.Popen(command)
-        time.sleep(2)
+        time.sleep(2)  # Give Streamlit time to start
         if is_streamlit_running():
             return jsonify({"status": "started"})
         else:
@@ -100,27 +115,22 @@ def start_streamlit():
     except Exception as e:
         return jsonify({"status": "failed", "message": f"Error starting Streamlit: {str(e)}"}), 500
 
+
 ### VM Monitoring & Management
 
 def _execute_ssh_command(ip, username, password, command, sudo_pass=None):
-    """
-    Executes an SSH command on a remote host.
-    Returns (success: bool, message: str)
-    """
+    """Executes an SSH command on a remote host."""
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-    CONNECT_TIMEOUT = 10 
-    COMMAND_EXEC_TIMEOUT = 30 
+    CONNECT_TIMEOUT = 10
+    COMMAND_EXEC_TIMEOUT = 30
 
     try:
         ssh.connect(ip, username=username, password=password, timeout=CONNECT_TIMEOUT)
 
-        full_command = ""
-        if sudo_pass:
-            full_command = f"echo {sudo_pass} | sudo -S {command} > /dev/null 2>&1 &"
-        else:
-            full_command = f"{command} > /dev/null 2>&1 &"
+        # Build the command string, including sudo if a password is provided
+        full_command = f"echo {sudo_pass} | sudo -S {command} > /dev/null 2>&1 &" if sudo_pass else f"{command} > /dev/null 2>&1 &"
 
         stdin, stdout, stderr = ssh.exec_command(full_command, timeout=COMMAND_EXEC_TIMEOUT)
 
@@ -130,7 +140,7 @@ def _execute_ssh_command(ip, username, password, command, sudo_pass=None):
 
         ssh.close()
 
-        if exit_status == 0 or exit_status == -1:
+        if exit_status == 0 or exit_status == -1: # -1 often indicates background process
             return True, "Command initiated in background."
         else:
             err_msg = f"Command failed to initiate (exit status {exit_status}). Output: '{output}', Error: '{error}'"
@@ -148,6 +158,7 @@ def _execute_ssh_command(ip, username, password, command, sudo_pass=None):
 @main.route("/vm-monitoring")
 @login_required
 def vm_monitoring():
+    """Renders the VM monitoring page."""
     vms = VM.query.filter_by(user_id=current_user.id).all()
     add_form = AddVMForm()
     edit_form = EditVMForm()
@@ -162,6 +173,7 @@ def vm_monitoring():
 @login_required
 @csrf.exempt
 def start_monitoring():
+    """Starts monitoring services (Zeek and Fluentd) on a VM."""
     data = request.get_json()
     vm_short_name = data.get("vm")
 
@@ -169,15 +181,13 @@ def start_monitoring():
     if not vm:
         return jsonify({"status": "error", "message": "Virtual Machine not found."}), 404
 
-    ip = vm.ip_address
-    username = vm.ssh_username
-    password = vm.ssh_password
-
-    deploy_commands = []
-    response_message = "Monitoring started."
-
-    deploy_commands.append("/opt/zeek/bin/zeekctl deploy")
-    deploy_commands.append("fluentd -c /etc/fluentd.conf -v")
+    ip, username, password = vm.ip_address, vm.ssh_username, vm.ssh_password
+    
+    # Commands to deploy Zeek and start Fluentd
+    deploy_commands = [
+        "/opt/zeek/bin/zeekctl deploy",
+        "fluentd -c /etc/fluentd.conf -v"
+    ]
 
     overall_success = True
     all_messages = []
@@ -191,8 +201,9 @@ def start_monitoring():
         vm.status = 'monitoring'
         try:
             db.session.commit()
+            # Emit status update via SocketIO
             socketio.emit('vm_status_update', {vm.short_name: vm.status}, namespace='/')
-            return jsonify({"status": "started", "message": response_message})
+            return jsonify({"status": "started", "message": "Monitoring started."})
         except Exception as e:
             db.session.rollback()
             return jsonify({"status": "failed", "message": f"Failed to update VM status in DB: {e}"})
@@ -204,6 +215,7 @@ def start_monitoring():
 @login_required
 @csrf.exempt
 def stop_monitoring():
+    """Stops monitoring services (Zeek and Fluentd) on a VM."""
     data = request.get_json()
     vm_short_name = data.get("vm")
 
@@ -211,13 +223,13 @@ def stop_monitoring():
     if not vm:
         return jsonify({"status": "error", "message": "Virtual Machine not found."}), 404
 
-    ip = vm.ip_address
-    username = vm.ssh_username
-    password = vm.ssh_password
+    ip, username, password = vm.ip_address, vm.ssh_username, vm.ssh_password
 
-    stop_commands = []
-    stop_commands.append("/opt/zeek/bin/zeekctl stop")
-    stop_commands.append("pkill -f fluentd")
+    # Commands to stop Zeek and kill Fluentd
+    stop_commands = [
+        "/opt/zeek/bin/zeekctl stop",
+        "pkill -f fluentd"
+    ]
 
     overall_success = True
     all_messages = []
@@ -229,9 +241,10 @@ def stop_monitoring():
             all_messages.append(f"Command '{cmd}' failed: {msg}")
 
     if overall_success:
-        vm.status = 'online'
+        vm.status = 'online' # Set status back to online after stopping monitoring
         try:
             db.session.commit()
+            # Emit status update via SocketIO
             socketio.emit('vm_status_update', {vm.short_name: vm.status}, namespace='/')
             return jsonify({"status": "stopped"})
         except Exception as e:
@@ -245,6 +258,7 @@ def stop_monitoring():
 @login_required
 @csrf.exempt
 def shutdown_vm():
+    """Shuts down a VM gracefully."""
     data = request.get_json()
     vm_short_name = data.get("vm")
 
@@ -252,15 +266,14 @@ def shutdown_vm():
     if not vm:
         return jsonify({"status": "error", "message": "Virtual Machine not found."}), 404
 
-    ip = vm.ip_address
-    username = vm.ssh_username
-    password = vm.ssh_password
+    ip, username, password = vm.ip_address, vm.ssh_username, vm.ssh_password
 
     try:
         success, output = _execute_ssh_command(ip, username, password, "/sbin/shutdown now", password)
         if success:
             vm.status = 'offline'
             db.session.commit()
+            # Emit status update via SocketIO
             socketio.emit('vm_status_update', {vm.short_name: vm.status}, namespace='/')
             return jsonify({"status": "shutdown"})
         else:
@@ -271,19 +284,18 @@ def shutdown_vm():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 def is_online(ip):
-    """Checks if a VM is online via ping."""
-    ping_executable_path = '/usr/bin/ping' # Ensure this path is correct for your system
+    """Checks if a VM is online using a ping command."""
+    ping_executable_path = '/usr/bin/ping' # Path to ping executable
 
-    command = [ping_executable_path, '-c', '1', '-W', '1', ip]
+    command = [ping_executable_path, '-c', '1', '-W', '1', ip] # Ping once, wait 1 second
     try:
         result = subprocess.run(
             command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            check=False,
+            check=False, # Don't raise an exception for non-zero exit codes
             text=True
         )
-        
         return result.returncode == 0
     except FileNotFoundError:
         return False
@@ -294,14 +306,13 @@ def is_online(ip):
 @login_required
 @csrf.exempt
 def add_vm():
+    """Adds a new VM to the user's list."""
     form = AddVMForm()
     if form.validate_on_submit():
-        existing_short_name_vm = VM.query.filter_by(user_id=current_user.id, short_name=form.short_name.data).first()
-        if existing_short_name_vm:
+        # Check for existing VM with same short name or name for the current user
+        if VM.query.filter_by(user_id=current_user.id, short_name=form.short_name.data).first():
             return jsonify({"status": "error", "message": "You already have a VM with this short name."}), 400
-
-        existing_name_vm = VM.query.filter_by(user_id=current_user.id, name=form.name.data).first()
-        if existing_name_vm:
+        if VM.query.filter_by(user_id=current_user.id, name=form.name.data).first():
             return jsonify({"status": "error", "message": "You already have a VM with this name."}), 400
 
         new_vm = VM(
@@ -312,7 +323,7 @@ def add_vm():
             ssh_password=form.ssh_password.data if form.ssh_password.data else None,
             description=form.description.data,
             user_id=current_user.id,
-            status='offline'
+            status='offline' # Default status
         )
         try:
             db.session.add(new_vm)
@@ -330,6 +341,7 @@ def add_vm():
 @login_required
 @csrf.exempt
 def edit_vm_details():
+    """Edits details of an existing VM."""
     form = EditVMForm()
     if form.validate_on_submit():
         vm_short_name = form.vm_short_name.data
@@ -338,19 +350,21 @@ def edit_vm_details():
         if not vm:
             return jsonify({"status": "error", "message": "Virtual Machine not found or you do not own it."}), 404
         
+        # Check if the new name conflicts with other VMs of the same user
         if form.name.data != vm.name:
             existing_name_vm = VM.query.filter(
                 VM.user_id == current_user.id,
                 VM.name == form.name.data,
-                VM.id != vm.id
+                VM.id != vm.id # Exclude the current VM
             ).first()
             if existing_name_vm:
                 return jsonify({"status": "error", "message": "You already have another VM with this name."}), 400
         
+        # Update VM details
         vm.name = form.name.data
         vm.ip_address = form.ip_address.data
         vm.ssh_username = form.ssh_username.data
-        if form.ssh_password.data:
+        if form.ssh_password.data: # Only update password if provided
             vm.ssh_password = form.ssh_password.data
         vm.description = form.description.data
 
@@ -369,6 +383,7 @@ def edit_vm_details():
 @login_required
 @csrf.exempt
 def delete_vm():
+    """Deletes a VM from the user's list."""
     data = request.get_json()
     vm_short_name = data.get("vm_short_name")
 
@@ -382,43 +397,45 @@ def delete_vm():
         flash(f"VM '{vm.name}' deleted successfully!", "success")
         return jsonify({"status": "success", "message": "VM deleted."})
     except Exception as e:
-        db.session.rollback()
-        return jsonify({"status": "error", "message": f"Failed to delete VM: {str(e)}"}), 500
+            db.session.rollback()
+            return jsonify({"status": "error", "message": f"Failed to delete VM: {str(e)}"}), 500
     
+
 ### Background Thread for VM Status Monitoring
 
+# Global variables for the background thread and its lock
 thread = None
 thread_lock = Lock()
 
 def background_vm_status_monitor(app):
-    """
-    Background thread that periodically checks VM statuses and emits updates.
-    """
+    """Periodically checks VM statuses and emits updates via SocketIO."""
     while True:
         current_statuses = {}
         ping_threads = []
         
         with app.app_context():
+            # Get all VM short names to check
             all_vm_short_names = [vm.short_name for vm in VM.query.all()]
 
+            # Create a thread for each VM status check
             for vm_short_name in all_vm_short_names:
                 ping_threads.append(Thread(target=_check_single_vm_status, args=(app, vm_short_name, current_statuses)))
             
+            # Start and join all threads
             for t in ping_threads:
                 t.start()
             for t in ping_threads:
                 t.join()
 
+            # Emit all gathered statuses to connected clients
             socketio.emit('vm_status_update', current_statuses, namespace='/')
 
-        socketio.sleep(5)
+        socketio.sleep(5) # Wait for 5 seconds before next check
 
 def _check_single_vm_status(app, vm_short_name, status_dict):
-    """
-    Helper to check individual VM status and update a shared dictionary.
-    Manages its own SQLAlchemy session for isolation.
-    """
+    """Helper to check an individual VM's status and update a shared dictionary."""
     with app.app_context():
+        # Use a new session for each thread to avoid conflicts
         Session = sessionmaker(bind=db.engine)
         session = Session()
 
@@ -430,27 +447,17 @@ def _check_single_vm_status(app, vm_short_name, status_dict):
             current_db_status = vm_obj.status
             final_status = current_db_status
 
-            # --- MODIFIED LOGIC ---
-            # If the VM is in 'monitoring' state, *do not change it unless a specific action causes it*.
-            # The background monitor will simply report 'monitoring' back.
+            # If VM is "monitoring", keep it as "monitoring"
             if current_db_status == 'monitoring':
-                final_status = 'monitoring' # Always maintain 'monitoring' if it's already set
-            elif current_db_status == 'offline':
-                # If DB says 'offline', ping to see if it came back online.
-                is_vm_online = is_online(vm_obj.ip_address)
-                if is_vm_online:
-                    final_status = "online" # It came back online!
-                else:
-                    final_status = "offline" # Still offline.
-            else: # This covers 'online'
-                # If DB says 'online', ping to confirm it's still online.
+                final_status = 'monitoring'
+            else: # For 'offline' or 'online'
                 is_vm_online = is_online(vm_obj.ip_address)
                 if is_vm_online:
                     final_status = "online"
                 else:
                     final_status = "offline"
-            # --- END MODIFIED LOGIC ---
-
+            
+            # Update VM status in the database if it has changed
             if vm_obj.status != final_status:
                 vm_obj.status = final_status
                 try:
@@ -458,35 +465,120 @@ def _check_single_vm_status(app, vm_short_name, status_dict):
                 except Exception as e:
                     session.rollback()
             
+            # Update the shared status dictionary
             with thread_lock:
                 status_dict[vm_obj.short_name] = final_status
 
         finally:
             session.close()
+
+
 ### SocketIO Event Handlers
 
 @socketio.on('connect', namespace='/')
 def test_connect(*args):
+    """Handles new SocketIO connections."""
     global thread
     with thread_lock:
+        # Start background monitoring thread if it's not already running
         if thread is None:
             thread = socketio.start_background_task(target=background_vm_status_monitor, app=current_app._get_current_object())
         
     with current_app.app_context():
+        # Emit initial VM statuses to the newly connected client
         if current_user.is_authenticated:
             Session = sessionmaker(bind=db.engine)
             session = Session()
             try:
                 all_vms = session.query(VM).filter_by(user_id=current_user.id).all()
-                initial_statuses = {}
-                for vm_obj in all_vms:
-                    initial_statuses[vm_obj.short_name] = vm_obj.status
+                initial_statuses = {vm_obj.short_name: vm_obj.status for vm_obj in all_vms}
                 emit('vm_status_update', initial_statuses)
             finally:
                 session.close()
         else:
-            emit('vm_status_update', {})
+            emit('vm_status_update', {}) # No VMs for unauthenticated users
 
 @socketio.on('disconnect', namespace='/')
 def test_disconnect():
+    """Handles SocketIO disconnections (placeholder)."""
     pass
+
+# NEW: Route for Mitigation Agent Interaction Page
+@main.route("/mitigation-agent-interaction")
+@login_required
+def mitigation_agent_interaction():
+    """Renders the page for interacting with the mitigation agent."""
+    vms = VM.query.filter_by(user_id=current_user.id).all()
+    # Pass VMs to the template so the user can select one to interact with
+    return render_template("mitigation_agent_interaction.html", vms=vms)
+
+# NEW: SocketIO event for generating mitigation commands
+@socketio.on('generate_mitigation', namespace='/')
+@login_required
+def handle_generate_mitigation(data):
+    """
+    Handles requests to generate mitigation commands based on an incident description.
+    """
+    incident_description = data.get('incident_description')
+    if not incident_description:
+        emit('mitigation_response', {'status': 'error', 'message': 'Incident description is required.'})
+        return
+
+    # Access mitigation_utility from the current_app object
+    mitigation_utility_instance = current_app.mitigation_utility 
+    if not mitigation_utility_instance:
+        emit('mitigation_response', {'status': 'error', 'message': 'Mitigation agent not initialized. Check server logs.'})
+        return
+
+    try:
+        action = mitigation_utility_instance.generate_mitigation_action(incident_description)
+        emit('mitigation_response', {
+            'status': 'success',
+            'description': action.description,
+            'commands': action.commands
+        })
+    except Exception as e:
+        emit('mitigation_response', {'status': 'error', 'message': f'Error generating mitigation: {str(e)}'})
+
+# NEW: SocketIO event for executing mitigation commands
+@socketio.on('execute_commands', namespace='/')
+@login_required
+def handle_execute_commands(data):
+    """
+    Handles requests to execute mitigation commands on a selected VM.
+    """
+    vm_short_name = data.get('vm_short_name')
+    commands = data.get('commands')
+
+    if not vm_short_name or not commands:
+        emit('execution_response', {'status': 'error', 'message': 'VM short name and commands are required.'})
+        return
+
+    # Access mitigation_utility from the current_app object
+    mitigation_utility_instance = current_app.mitigation_utility
+    if not mitigation_utility_instance:
+        emit('execution_response', {'status': 'error', 'message': 'Mitigation agent not initialized. Check server logs.'})
+        return
+
+    with current_app.app_context():
+        vm = VM.query.filter_by(short_name=vm_short_name, user_id=current_user.id).first()
+        if not vm:
+            emit('execution_response', {'status': 'error', 'message': 'Virtual Machine not found or you do not own it.'})
+            return
+
+        if not vm.ssh_password:
+            emit('execution_response', {'status': 'error', 'message': 'SSH password not set for this VM. Cannot execute commands.'})
+            return
+
+        try:
+            results = mitigation_utility_instance.execute_mitigation_commands(
+                vm.ip_address, vm.ssh_username, vm.ssh_password, commands
+            )
+            emit('execution_response', {
+                'status': 'success',
+                'results': results, # List of (success, message) tuples for each command
+                'vm_short_name': vm_short_name
+            })
+        except Exception as e:
+            emit('execution_response', {'status': 'error', 'message': f'Error executing commands: {str(e)}'})
+

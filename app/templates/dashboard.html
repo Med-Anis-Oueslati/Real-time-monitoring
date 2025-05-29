@@ -23,6 +23,12 @@
       <p>Start monitoring on available virtual machines.</p>
       <a href="{{ url_for('main.vm_monitoring') }}" class="btn primary">Go</a>
     </div>
+    {# NEW CARD FOR MITIGATION AGENT INTERACTION #}
+    <div class="card">
+      <h3>Mitigation Agent Interaction</h3>
+      <p>Manually generate and execute mitigation commands.</p>
+      <a href="{{ url_for('main.mitigation_agent_interaction') }}" class="btn primary">Go</a>
+    </div>
   </div>
 </div>
 <script>
@@ -33,12 +39,63 @@
       if (data.status === "started" || data.status === "already_running") {
         window.open("http://localhost:8501/", "_blank");
       } else {
-        alert("Failed to start the chatbot app. Please try again.");
+        // Using a custom message box instead of alert()
+        const messageBox = document.createElement('div');
+        messageBox.className = 'custom-message-box';
+        messageBox.innerHTML = `
+          <div class="message-content">
+            <p>Failed to start the chatbot app. Please try again.</p>
+            <button onclick="this.parentNode.parentNode.remove()">OK</button>
+          </div>
+        `;
+        document.body.appendChild(messageBox);
       }
     })
     .catch(() => {
-      alert("Error contacting the server.");
+      // Using a custom message box instead of alert()
+      const messageBox = document.createElement('div');
+      messageBox.className = 'custom-message-box';
+      messageBox.innerHTML = `
+        <div class="message-content">
+          <p>Error contacting the server.</p>
+          <button onclick="this.parentNode.parentNode.remove()">OK</button>
+        </div>
+      `;
+      document.body.appendChild(messageBox);
     });
 });
 </script>
+<style>
+  /* Basic styling for the custom message box */
+  .custom-message-box {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+
+  .message-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    text-align: center;
+  }
+
+  .message-content button {
+    margin-top: 15px;
+    padding: 8px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+</style>
 {% endblock %}

@@ -9,7 +9,9 @@
 <body>
     <div class="container">
         <nav class="navbar">          
-            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Falcon Logo" class="logo-img">
+            <a href="{{ url_for('main.dashboard') }}" class="logo-link">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Falcon Logo" class="logo-img">
+            </a>
             <div class="nav-links">
                 {# Use current_user from Flask-Login #}
                 {% if current_user.is_authenticated %}

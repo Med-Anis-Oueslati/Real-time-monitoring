@@ -12,12 +12,7 @@
             <textarea id="incidentDescription" rows="6" placeholder=" " style="width: 100%; padding: 10px; border-radius: 8px; border: none; background: rgba(255, 255, 255, 0.15); color: #e3f2fd; box-shadow: inset 1px 1px 5px rgba(255, 255, 255, 0.2); resize: vertical;"></textarea>
             <label for="incidentDescription" style="position: absolute; left: 15px; top: 12px; color: #cfd8dc; font-weight: 400; pointer-events: none; transition: all 0.3s ease;">Enter Incident Description</label>
         </div>
-        <button id="generateBtn" class="btn primary" style="width: auto; padding: 12px 30px; font-size: 1rem; margin-bottom: 1rem;">Generate Commands</button>
-        
-        {# NEW: Loading indicator for command generation #}
-        <div id="loadingIndicator" style="display: none; margin-top: 1rem; color: #bbdefb; font-weight: bold;">
-            <div class="spinner"></div> Generating commands...
-        </div>
+        <button id="generateBtn" class="btn primary" style="width: auto; padding: 12px 30px; font-size: 1rem; margin-bottom: 2rem;">Generate Commands</button>
 
         <div id="mitigationResult" style="margin-top: 2rem; text-align: left; background: rgba(255, 255, 255, 0.08); padding: 1.5rem; border-radius: 12px; display: none;">
             <h4 style="color: #bbdefb; margin-bottom: 1rem;">Proposed Mitigation:</h4>
@@ -40,9 +35,7 @@
 
         <div id="executionResult" style="margin-top: 2rem; text-align: left; background: rgba(255, 255, 255, 0.08); padding: 1.5rem; border-radius: 12px; display: none;">
             <h4 style="color: #bbdefb; margin-bottom: 1rem;">Execution Status:</h4>
-            {# MODIFIED: Changed button styling for better visibility #}
-            <button id="toggleOutputBtn" style="background-color: #4a90e2; color: white; padding: 8px 15px; font-size: 0.9rem; margin-bottom: 1rem; border-radius: 8px; cursor: pointer; border: none;">Toggle Output</button>
-            <div id="executionLogs" class="collapsible-output" style="white-space: pre-wrap; font-family: monospace; color: #c5cae9;"></div>
+            <div id="executionLogs" style="white-space: pre-wrap; font-family: monospace; color: #c5cae9;"></div>
             <button id="clearResultBtn" class="btn primary" style="width: auto; padding: 10px 20px; font-size: 0.9rem; margin-top: 1.5rem; background-color: #607D8B;">Clear Results</button>
         </div>
 
@@ -57,7 +50,6 @@
 
         const incidentDescriptionInput = document.getElementById('incidentDescription');
         const generateBtn = document.getElementById('generateBtn');
-        const loadingIndicator = document.getElementById('loadingIndicator'); 
         const mitigationResultDiv = document.getElementById('mitigationResult');
         const mitigationDescriptionPara = document.getElementById('mitigationDescription');
         const mitigationCommandsList = document.getElementById('mitigationCommands');
@@ -68,7 +60,6 @@
         const executionLogsDiv = document.getElementById('executionLogs');
         const statusMessageDiv = document.getElementById('statusMessage');
         const clearResultBtn = document.getElementById('clearResultBtn');
-        const toggleOutputBtn = document.getElementById('toggleOutputBtn'); // NEW
 
         // Function to display status messages
         function displayStatus(message, type) {
@@ -87,12 +78,9 @@
         generateBtn.addEventListener('click', function() {
             const incidentDescription = incidentDescriptionInput.value.trim();
             if (incidentDescription) {
-                loadingIndicator.style.display = 'flex'; // Show loading indicator
-                generateBtn.disabled = true; // Disable button while processing
-                mitigationResultDiv.style.display = 'none'; // Hide previous results
-                executionResultDiv.style.display = 'none'; // Hide execution results
-                statusMessageDiv.style.display = 'none'; // Hide any previous status
+                displayStatus('Generating commands...', 'info'); // 'info' class could be added to style.css
                 socket.emit('generate_mitigation', { incident_description: incidentDescription });
+                generateBtn.disabled = true; // Disable button while processing
             } else {
                 displayStatus('Please enter an incident description.', 'error');
             }
@@ -112,13 +100,9 @@
 
             if (commands.length > 0) {
                 displayStatus(`Executing commands on ${selectedVmShortName}...`, 'info');
-                executionResultDiv.style.display = 'block'; // Show execution result area
-                executionLogsDiv.textContent = 'Executing...'; // Initial message
-                executionLogsDiv.classList.add('collapsed'); // Ensure it's collapsed initially
-                toggleOutputBtn.textContent = 'Expand Output'; // Reset button text
+                socket.emit('execute_commands', { vm_short_name: selectedVmShortName, commands: commands });
                 executeBtn.disabled = true; // Disable buttons during execution
                 cancelBtn.disabled = true;
-                socket.emit('execute_commands', { vm_short_name: selectedVmShortName, commands: commands });
             } else {
                 displayStatus('No commands to execute.', 'error');
             }
@@ -132,15 +116,12 @@
             mitigationCommandsList.innerHTML = '';
             vmSelect.value = ''; // Reset VM selection
             generateBtn.disabled = false; // Re-enable generate button
-            loadingIndicator.style.display = 'none'; // Ensure loading indicator is hidden
             displayStatus('Mitigation generation cancelled.', 'success');
         });
 
         clearResultBtn.addEventListener('click', function() {
             executionResultDiv.style.display = 'none';
             executionLogsDiv.textContent = '';
-            executionLogsDiv.classList.add('collapsed'); // Reset to collapsed
-            toggleOutputBtn.textContent = 'Expand Output'; // Reset button text
             // Also reset the generation part for a fresh start
             mitigationResultDiv.style.display = 'none';
             incidentDescriptionInput.value = '';
@@ -148,26 +129,12 @@
             mitigationCommandsList.innerHTML = '';
             vmSelect.value = '';
             generateBtn.disabled = false;
-            loadingIndicator.style.display = 'none'; // Ensure loading indicator is hidden
-            statusMessageDiv.style.display = 'none'; // Clear any lingering status messages
-        });
-
-        // NEW: Toggle output button functionality
-        toggleOutputBtn.addEventListener('click', function() {
-            executionLogsDiv.classList.toggle('collapsed');
-            if (executionLogsDiv.classList.contains('collapsed')) {
-                toggleOutputBtn.textContent = 'Expand Output';
-            } else {
-                toggleOutputBtn.textContent = 'Collapse Output';
-            }
         });
 
         // --- Socket.IO Handlers ---
 
         socket.on('mitigation_response', function(data) {
             generateBtn.disabled = false; // Re-enable generate button
-            loadingIndicator.style.display = 'none'; // Hide loading indicator
-
             if (data.status === 'success') {
                 mitigationDescriptionPara.textContent = data.description;
                 mitigationCommandsList.innerHTML = '';
@@ -209,9 +176,6 @@
                 displayStatus(`Execution error: ${data.message}`, 'error');
             }
             executionLogsDiv.textContent = logs;
-            // Ensure the output is collapsed by default after execution
-            executionLogsDiv.classList.add('collapsed');
-            toggleOutputBtn.textContent = 'Expand Output';
         });
 
         // Handle floating label behavior for textarea
@@ -269,44 +233,6 @@
         background-position: right 10px center;
         background-size: 16px;
         padding-right: 30px; /* Space for the arrow */
-    }
-
-    /* Spinner CSS */
-    .spinner {
-        border: 4px solid rgba(255, 255, 255, 0.3);
-        border-top: 4px solid #bbdefb;
-        border-radius: 50%;
-        width: 20px;
-        height: 20px;
-        animation: spin 1s linear infinite;
-        display: inline-block;
-        vertical-align: middle;
-        margin-right: 10px;
-    }
-
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-
-    /* NEW: Collapsible Output Styles */
-    .collapsible-output {
-        max-height: 150px; /* Initial collapsed height */
-        overflow-y: auto; /* Enable scrolling when content exceeds max-height */
-        transition: max-height 0.3s ease-out; /* Smooth transition for expand/collapse */
-        border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
-        padding: 10px;
-        border-radius: 8px;
-        margin-top: 10px;
-    }
-
-    .collapsible-output.collapsed {
-        max-height: 150px; /* Explicitly set for collapsed state */
-    }
-
-    .collapsible-output:not(.collapsed) {
-        max-height: 500px; /* Expanded height (adjust as needed) */
-        /* You could also set max-height to a very large value like 9999px for "auto" effect */
     }
 </style>
 {% endblock %}

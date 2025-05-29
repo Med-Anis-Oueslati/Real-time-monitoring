@@ -2,7 +2,8 @@
 from app import create_app, db, socketio # MODIFIED: Import socketio
 from app.models import User, VM
 import os # NEW: Import os for environment variable
-
+from dotenv import load_dotenv
+load_dotenv() # Load environment variables from .env file
 app = create_app()
 
 with app.app_context():

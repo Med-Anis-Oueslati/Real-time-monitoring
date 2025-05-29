@@ -1,312 +1,560 @@
 {% extends "base.html" %}
 
-{% block title %}Mitigation Agent{% endblock %}
-
 {% block content %}
-<div class="container" style="margin-top: 3rem; text-align: center;">
-    <h2 style="margin-bottom: 2rem; color: #e1e8ff;">Mitigation Agent Interaction</h2>
-
-    <div class="form-container" style="max-width: 700px; padding: 2rem;">
-        <h3 style="margin-bottom: 1.5rem; color: #e1e8ff;">Generate Mitigation Commands</h3>
-        <div class="form-group" style="margin-bottom: 1.5rem;">
-            <textarea id="incidentDescription" rows="6" placeholder=" " style="width: 100%; padding: 10px; border-radius: 8px; border: none; background: rgba(255, 255, 255, 0.15); color: #e3f2fd; box-shadow: inset 1px 1px 5px rgba(255, 255, 255, 0.2); resize: vertical;"></textarea>
-            <label for="incidentDescription" style="position: absolute; left: 15px; top: 12px; color: #cfd8dc; font-weight: 400; pointer-events: none; transition: all 0.3s ease;">Enter Incident Description</label>
-        </div>
-        <button id="generateBtn" class="btn primary" style="width: auto; padding: 12px 30px; font-size: 1rem; margin-bottom: 1rem;">Generate Commands</button>
-        
-        {# NEW: Loading indicator for command generation #}
-        <div id="loadingIndicator" style="display: none; margin-top: 1rem; color: #bbdefb; font-weight: bold;">
-            <div class="spinner"></div> Generating commands...
-        </div>
-
-        <div id="mitigationResult" style="margin-top: 2rem; text-align: left; background: rgba(255, 255, 255, 0.08); padding: 1.5rem; border-radius: 12px; display: none;">
-            <h4 style="color: #bbdefb; margin-bottom: 1rem;">Proposed Mitigation:</h4>
-            <p id="mitigationDescription" style="color: #c5cae9; margin-bottom: 1rem;"></p>
-            <ul id="mitigationCommands" style="list-style-type: disc; padding-left: 20px; color: #e3f2fd;"></ul>
-
-            <h4 style="color: #bbdefb; margin-top: 2rem; margin-bottom: 1rem;">Select VM to Execute On:</h4>
-            <select id="vmSelect" style="width: 100%; padding: 10px; border-radius: 8px; border: none; background: rgba(255, 255, 255, 0.15); color: #e3f2fd; margin-bottom: 1.5rem;">
-                <option value="">-- Select a VM --</option>
-                {% for vm in vms %}
-                <option value="{{ vm.short_name }}">{{ vm.name }} ({{ vm.ip_address }})</option>
-                {% endfor %}
-            </select>
-
-            <div style="display: flex; justify-content: center; gap: 1rem;">
-                <button id="executeBtn" class="btn primary" style="width: auto; padding: 12px 30px; font-size: 1rem; background-color: #4CAF50;">Execute Commands</button>
-                <button id="cancelBtn" class="btn secondary" style="width: auto; padding: 12px 30px; font-size: 1rem;">Cancel</button>
-            </div>
-        </div>
-
-        <div id="executionResult" style="margin-top: 2rem; text-align: left; background: rgba(255, 255, 255, 0.08); padding: 1.5rem; border-radius: 12px; display: none;">
-            <h4 style="color: #bbdefb; margin-bottom: 1rem;">Execution Status:</h4>
-            {# MODIFIED: Changed button styling for better visibility #}
-            <button id="toggleOutputBtn" style="background-color: #4a90e2; color: white; padding: 8px 15px; font-size: 0.9rem; margin-bottom: 1rem; border-radius: 8px; cursor: pointer; border: none;">Toggle Output</button>
-            <div id="executionLogs" class="collapsible-output" style="white-space: pre-wrap; font-family: monospace; color: #c5cae9;"></div>
-            <button id="clearResultBtn" class="btn primary" style="width: auto; padding: 10px 20px; font-size: 0.9rem; margin-top: 1.5rem; background-color: #607D8B;">Clear Results</button>
-        </div>
-
-        <div id="statusMessage" class="flashes" style="margin-top: 1.5rem; display: none;"></div>
-    </div>
+<h1>Virtual Machine Monitoring Dashboard</h1>
+<div class="header-actions">
+  <button class="btn primary" onclick="openAddVMModal()">Add New VM</button>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+<div class="cards">
+  {% if vms %}
+    {% for vm in vms %}
+    <div class="card" id="vm-{{ vm.short_name }}">
+      <h3>{{ vm.name }}</h3>
+      <p>IP Address: <span id="ip-{{ vm.short_name }}">{{ vm.ip_address }}</span></p>
+      <p>SSH Username: <span id="ssh-username-{{ vm.short_name }}">{{ vm.ssh_username }}</span></p>
+      <p>Description: <span id="description-{{ vm.short_name }}">{{ vm.description if vm.description else 'N/A' }}</span></p>
+      <p>Current Status: <span id="status-{{ vm.short_name }}">Checking...</span></p>
+      <div class="card-buttons">
+        <button id="monitor-{{ vm.short_name }}" class="btn primary" onclick="toggleMonitoring('{{ vm.short_name }}')">Start Monitoring</button> <br><br>
+        <button id="shutdown-{{ vm.short_name }}" class="btn primary" onclick="shutdownVM('{{ vm.short_name }}')">Shutdown</button><br><br>
+        <button class="btn secondary" onclick="openEditVMDetailsModal(
+            '{{ vm.short_name }}',
+            '{{ vm.name }}',
+            '{{ vm.ip_address }}',
+            '{{ vm.ssh_username }}',
+            '{{ vm.description | default('') }}'
+        )">Edit Details</button>
+        <button class="btn danger" onclick="deleteVM('{{ vm.short_name }}', '{{ vm.name }}')">Delete</button>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <p>No virtual machines configured yet. Click "Add New VM" to get started.</p>
+  {% endif %}
+</div>
+
+{# NEW: Add VM Modal #}
+<div id="addVMModal" class="modal">
+  <div class="modal-content form-container">
+    <span class="close-button" onclick="closeAddVMModal()">&times;</span>
+    <h2>Add New Virtual Machine</h2>
+    <form id="addVMForm" method="POST" action="{{ url_for('main.add_vm') }}">
+        {{ add_form.hidden_tag() }}
+        <div class="form-group">
+            {{ add_form.name(size=32, placeholder=" ") }}
+            {{ add_form.name.label }}
+            {% if add_form.name.errors %}
+                <ul class="errors">{% for error in add_form.name.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ add_form.short_name(size=32, placeholder=" ") }}
+            {{ add_form.short_name.label }}
+            {% if add_form.short_name.errors %}
+                <ul class="errors">{% for error in add_form.short_name.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ add_form.ip_address(size=15, placeholder=" ") }}
+            {{ add_form.ip_address.label }}
+            {% if add_form.ip_address.errors %}
+                <ul class="errors">{% for error in add_form.ip_address.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ add_form.ssh_username(size=32, placeholder=" ") }}
+            {{ add_form.ssh_username.label }}
+            {% if add_form.ssh_username.errors %}
+                <ul class="errors">{% for error in add_form.ssh_username.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ add_form.ssh_password(size=32, placeholder=" ") }}
+            {{ add_form.ssh_password.label }}
+            {% if add_form.ssh_password.errors %}
+                <ul class="errors">{% for error in add_form.ssh_password.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ add_form.description(rows=3, placeholder=" ") }}
+            {{ add_form.description.label }}
+            {% if add_form.description.errors %}
+                <ul class="errors">{% for error in add_form.description.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ add_form.submit(class_="btn primary") }}
+        </div>
+    </form>
+    <div id="add-vm-feedback" class="flashes" style="display:none;"></div>
+  </div>
+</div>
+
+{# MODIFIED: Edit VM Details Modal/Form (formerly editIPModal) #}
+<div id="editVMDetailsModal" class="modal">
+  <div class="modal-content form-container">
+    <span class="close-button" onclick="closeEditVMDetailsModal()">&times;</span>
+    <h2>Edit VM Details</h2>
+    <form id="editVMDetailsForm" method="POST" action="{{ url_for('main.edit_vm_details') }}">
+        {{ edit_form.hidden_tag() }}
+        <input type="hidden" id="edit-modal-vm-short-name" name="vm_short_name" value="">
+        <div class="form-group">
+            {{ edit_form.name(size=32, placeholder=" ", id="edit_name") }}
+            {{ edit_form.name.label }}
+            {% if edit_form.name.errors %}
+                <ul class="errors">{% for error in edit_form.name.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ edit_form.ip_address(size=15, placeholder=" ", id="edit_ip_address") }}
+            {{ edit_form.ip_address.label }}
+            {% if edit_form.ip_address.errors %}
+                <ul class="errors">{% for error in edit_form.ip_address.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ edit_form.ssh_username(size=32, placeholder=" ", id="edit_ssh_username") }}
+            {{ edit_form.ssh_username.label }}
+            {% if edit_form.ssh_username.errors %}
+                <ul class="errors">{% for error in edit_form.ssh_username.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ edit_form.ssh_password(size=32, placeholder="Leave blank to keep current", id="edit_ssh_password") }}
+            {{ edit_form.ssh_password.label }}
+            {% if edit_form.ssh_password.errors %}
+                <ul class="errors">{% for error in edit_form.ssh_password.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ edit_form.description(rows=3, placeholder=" ", id="edit_description") }}
+            {{ edit_form.description.label }}
+            {% if edit_form.description.errors %}
+                <ul class="errors">{% for error in edit_form.description.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ edit_form.submit(class_="btn primary") }}
+        </div>
+    </form>
+    <div id="edit-vm-feedback" class="flashes" style="display:none;"></div>
+  </div>
+</div>
+<style>
+  /* Basic Modal CSS (add to style.css for cleaner separation later) */
+  .modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 100; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
+    padding-top: 60px;
+  }
+  .modal-content {
+    background: rgba(255, 255, 255, 0.15); /* Slightly lighter background than form-container */
+    margin: 5% auto; /* 5% from the top and centered */
+    padding: 20px;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 16px;
+    width: 80%; /* Could be responsive */
+    max-width: 500px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    position: relative;
+  }
+  .close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .close-button:hover,
+  .close-button:focus {
+    color: white;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .modal .form-group {
+    margin-bottom: 1.5rem; /* Adjust spacing inside modal form */
+  }
+  .modal .btn.primary,
+  .modal .btn.danger { /* NEW: styling for danger button in modal */
+    width: auto; /* Don't make modal buttons full width */
+    padding: 10px 25px;
+  }
+  /* NEW: Styles for the "Add New VM" button */
+  .header-actions {
+    margin-bottom: 20px;
+    text-align: right; /* Align button to the right */
+  }
+  /* Optional: Styles for new info in card */
+  .card p {
+    margin-bottom: 5px;
+    font-size: 0.95em;
+  }
+  .card .btn.danger {
+    background-color: #dc3545; /* Red for delete */
+    border-color: #dc3545;
+  }
+  .card .btn.danger:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+  }
+</style>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const socket = io();
+// monitoringState is still needed to track the UI's perceived state
+const monitoringState = {};
+// Add a new set to keep track of VMs explicitly put into "monitoring" mode from the UI
+const lockedMonitoringVMs = new Set();
 
-        const incidentDescriptionInput = document.getElementById('incidentDescription');
-        const generateBtn = document.getElementById('generateBtn');
-        const loadingIndicator = document.getElementById('loadingIndicator'); 
-        const mitigationResultDiv = document.getElementById('mitigationResult');
-        const mitigationDescriptionPara = document.getElementById('mitigationDescription');
-        const mitigationCommandsList = document.getElementById('mitigationCommands');
-        const vmSelect = document.getElementById('vmSelect');
-        const executeBtn = document.getElementById('executeBtn');
-        const cancelBtn = document.getElementById('cancelBtn');
-        const executionResultDiv = document.getElementById('executionResult');
-        const executionLogsDiv = document.getElementById('executionLogs');
-        const statusMessageDiv = document.getElementById('statusMessage');
-        const clearResultBtn = document.getElementById('clearResultBtn');
-        const toggleOutputBtn = document.getElementById('toggleOutputBtn'); // NEW
+// Initialize SocketIO client
+const socket = io();
 
-        // Function to display status messages
-        function displayStatus(message, type) {
-            statusMessageDiv.textContent = message;
-            statusMessageDiv.className = `flashes ${type}`; // Add success/error class
-            statusMessageDiv.style.display = 'block';
-            statusMessageDiv.classList.add('fadeIn'); // Trigger fade-in animation
-            setTimeout(() => {
-                statusMessageDiv.style.display = 'none';
-                statusMessageDiv.classList.remove('fadeIn');
-            }, 5000); // Hide after 5 seconds
+document.addEventListener("DOMContentLoaded", () => {
+    {% if vms %}
+        {% for vm in vms %}
+        // Initialize monitoringState based on initial DB status, which will be updated by SocketIO
+        // Start with a default, SocketIO will quickly update
+        monitoringState['{{ vm.short_name }}'] = (('{{ vm.status }}' === 'monitoring') || ('{{ vm.status }}' === 'online'));
+        // If the VM's initial status is 'monitoring', lock it
+        if ('{{ vm.status }}' === 'monitoring') {
+            lockedMonitoringVMs.add('{{ vm.short_name }}');
         }
+        // Initial UI update based on Flask-rendered status (before SocketIO takes over)
+        updateCardUI('{{ vm.short_name }}', '{{ vm.status }}');
+        {% endfor %}
+    {% endif %}
 
-        // --- Event Listeners ---
-
-        generateBtn.addEventListener('click', function() {
-            const incidentDescription = incidentDescriptionInput.value.trim();
-            if (incidentDescription) {
-                loadingIndicator.style.display = 'flex'; // Show loading indicator
-                generateBtn.disabled = true; // Disable button while processing
-                mitigationResultDiv.style.display = 'none'; // Hide previous results
-                executionResultDiv.style.display = 'none'; // Hide execution results
-                statusMessageDiv.style.display = 'none'; // Hide any previous status
-                socket.emit('generate_mitigation', { incident_description: incidentDescription });
-            } else {
-                displayStatus('Please enter an incident description.', 'error');
+    // Listen for 'vm_status_update' events from the server
+    socket.on('vm_status_update', (statuses) => {
+    console.log("Received VM status update:", statuses);
+    for (const vmShortName in statuses) {
+        if (statuses.hasOwnProperty(vmShortName)) {
+            // Only update UI if:
+            // 1. The VM is NOT in locked monitoring state, OR
+            // 2. The status is 'offline' (from shutdown), OR
+            // 3. The status is 'online' AND we're not currently monitoring
+            if (!lockedMonitoringVMs.has(vmShortName) || 
+                statuses[vmShortName] === 'offline' ||
+                (statuses[vmShortName] === 'online' && !monitoringState[vmShortName])) {
+                updateCardUI(vmShortName, statuses[vmShortName]);
             }
-        });
+        }
+    }
+});
 
-        executeBtn.addEventListener('click', function() {
-            const selectedVmShortName = vmSelect.value;
-            if (!selectedVmShortName) {
-                displayStatus('Please select a VM to execute on.', 'error');
-                return;
-            }
-
-            const commands = [];
-            mitigationCommandsList.querySelectorAll('li').forEach(li => {
-                commands.push(li.textContent.trim());
-            });
-
-            if (commands.length > 0) {
-                displayStatus(`Executing commands on ${selectedVmShortName}...`, 'info');
-                executionResultDiv.style.display = 'block'; // Show execution result area
-                executionLogsDiv.textContent = 'Executing...'; // Initial message
-                executionLogsDiv.classList.add('collapsed'); // Ensure it's collapsed initially
-                toggleOutputBtn.textContent = 'Expand Output'; // Reset button text
-                executeBtn.disabled = true; // Disable buttons during execution
-                cancelBtn.disabled = true;
-                socket.emit('execute_commands', { vm_short_name: selectedVmShortName, commands: commands });
-            } else {
-                displayStatus('No commands to execute.', 'error');
-            }
-        });
-
-        cancelBtn.addEventListener('click', function() {
-            // Hide the proposed mitigation and clear inputs
-            mitigationResultDiv.style.display = 'none';
-            incidentDescriptionInput.value = '';
-            mitigationDescriptionPara.textContent = '';
-            mitigationCommandsList.innerHTML = '';
-            vmSelect.value = ''; // Reset VM selection
-            generateBtn.disabled = false; // Re-enable generate button
-            loadingIndicator.style.display = 'none'; // Ensure loading indicator is hidden
-            displayStatus('Mitigation generation cancelled.', 'success');
-        });
-
-        clearResultBtn.addEventListener('click', function() {
-            executionResultDiv.style.display = 'none';
-            executionLogsDiv.textContent = '';
-            executionLogsDiv.classList.add('collapsed'); // Reset to collapsed
-            toggleOutputBtn.textContent = 'Expand Output'; // Reset button text
-            // Also reset the generation part for a fresh start
-            mitigationResultDiv.style.display = 'none';
-            incidentDescriptionInput.value = '';
-            mitigationDescriptionPara.textContent = '';
-            mitigationCommandsList.innerHTML = '';
-            vmSelect.value = '';
-            generateBtn.disabled = false;
-            loadingIndicator.style.display = 'none'; // Ensure loading indicator is hidden
-            statusMessageDiv.style.display = 'none'; // Clear any lingering status messages
-        });
-
-        // NEW: Toggle output button functionality
-        toggleOutputBtn.addEventListener('click', function() {
-            executionLogsDiv.classList.toggle('collapsed');
-            if (executionLogsDiv.classList.contains('collapsed')) {
-                toggleOutputBtn.textContent = 'Expand Output';
-            } else {
-                toggleOutputBtn.textContent = 'Collapse Output';
-            }
-        });
-
-        // --- Socket.IO Handlers ---
-
-        socket.on('mitigation_response', function(data) {
-            generateBtn.disabled = false; // Re-enable generate button
-            loadingIndicator.style.display = 'none'; // Hide loading indicator
-
-            if (data.status === 'success') {
-                mitigationDescriptionPara.textContent = data.description;
-                mitigationCommandsList.innerHTML = '';
-                if (data.commands && data.commands.length > 0) {
-                    data.commands.forEach(cmd => {
-                        const li = document.createElement('li');
-                        li.textContent = cmd;
-                        mitigationCommandsList.appendChild(li);
-                    });
-                    executeBtn.disabled = false; // Enable execute if commands are present
-                    cancelBtn.disabled = false;
-                } else {
-                    mitigationCommandsList.innerHTML = '<li>No specific commands proposed for this incident.</li>';
-                    executeBtn.disabled = true; // No commands, no execution
-                    cancelBtn.disabled = false;
-                }
-                mitigationResultDiv.style.display = 'block';
-                displayStatus('Mitigation commands generated.', 'success');
-            } else {
-                displayStatus(`Error: ${data.message}`, 'error');
-                mitigationResultDiv.style.display = 'none';
-            }
-        });
-
-        socket.on('execution_response', function(data) {
-            executeBtn.disabled = false; // Re-enable execute button
-            cancelBtn.disabled = false;
-            executionResultDiv.style.display = 'block';
-            let logs = `Execution on VM: ${data.vm_short_name}\n\n`;
-            if (data.status === 'success') {
-                data.results.forEach((result, index) => {
-                    const [success, message] = result;
-                    logs += `Command ${index + 1}: ${success ? 'SUCCESS' : 'FAILED'}\n`;
-                    logs += `  Message: ${message}\n\n`;
-                });
-                displayStatus('Commands executed. Check status below.', 'success');
-            } else {
-                logs += `Overall Execution Failed: ${data.message}\n`;
-                displayStatus(`Execution error: ${data.message}`, 'error');
-            }
-            executionLogsDiv.textContent = logs;
-            // Ensure the output is collapsed by default after execution
-            executionLogsDiv.classList.add('collapsed');
-            toggleOutputBtn.textContent = 'Expand Output';
-        });
-
-        // Handle floating label behavior for textarea
-        incidentDescriptionInput.addEventListener('focus', () => {
-            incidentDescriptionInput.nextElementSibling.style.top = '-18px';
-            incidentDescriptionInput.nextElementSibling.style.left = '10px';
-            incidentDescriptionInput.nextElementSibling.style.fontSize = '0.85rem';
-            incidentDescriptionInput.nextElementSibling.style.color = '#bbdefb';
-            incidentDescriptionInput.nextElementSibling.style.fontWeight = '600';
-            incidentDescriptionInput.nextElementSibling.style.background = 'rgba(13, 71, 161, 0.8)';
-            incidentDescriptionInput.nextElementSibling.style.padding = '0 6px';
-            incidentDescriptionInput.nextElementSibling.style.borderRadius = '6px';
-        });
-
-        incidentDescriptionInput.addEventListener('blur', () => {
-            if (incidentDescriptionInput.value.trim() === '') {
-                incidentDescriptionInput.nextElementSibling.style.top = '12px';
-                incidentDescriptionInput.nextElementSibling.style.left = '15px';
-                incidentDescriptionInput.nextElementSibling.style.fontSize = '1rem';
-                incidentDescriptionInput.nextElementSibling.style.color = '#cfd8dc';
-                incidentDescriptionInput.nextElementSibling.style.fontWeight = '400';
-                incidentDescriptionInput.nextElementSibling.style.background = 'transparent';
-                incidentDescriptionInput.nextElementSibling.style.padding = '0';
-                incidentDescriptionInput.nextElementSibling.style.borderRadius = '0';
-            }
-        });
-        // Initial check for placeholder-shown for textarea
-        if (incidentDescriptionInput.value.trim() !== '') {
-            incidentDescriptionInput.nextElementSibling.style.top = '-18px';
-            incidentDescriptionInput.nextElementSibling.style.left = '10px';
-            incidentDescriptionInput.nextElementSibling.style.fontSize = '0.85rem';
-            incidentDescriptionInput.nextElementSibling.style.color = '#bbdefb';
-            incidentDescriptionInput.nextElementSibling.style.fontWeight = '600';
-            incidentDescriptionInput.nextElementSibling.style.background = 'rgba(13, 71, 161, 0.8)';
-            incidentDescriptionInput.nextElementSibling.style.padding = '0 6px';
-            incidentDescriptionInput.nextElementSibling.style.borderRadius = '6px';
+    // Listen for 'vm_deleted' event
+    socket.on('vm_deleted', (data) => {
+        const vmShortName = data.short_name;
+        const vmCard = document.getElementById(`vm-${vmShortName}`);
+        if (vmCard) {
+            vmCard.remove();
+            // Also remove from locked state if it was there
+            lockedMonitoringVMs.delete(vmShortName);
+            console.log(`VM card for ${vmShortName} removed due to deletion event.`);
         }
     });
+
+    // Handle Edit VM Details form submission via AJAX
+    document.getElementById('editVMDetailsForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const form = this;
+        const feedbackDiv = document.getElementById('edit-vm-feedback');
+        feedbackDiv.style.display = 'none';
+        feedbackDiv.innerText = '';
+
+        fetch(form.action, {
+            method: form.method,
+            body: new FormData(form),
+            headers: {}
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success") {
+                feedbackDiv.className = "flashes success";
+                feedbackDiv.innerText = data.message;
+                feedbackDiv.style.display = 'block';
+
+                const vmShortName = document.getElementById('edit-modal-vm-short-name').value;
+                document.getElementById(`vm-${vmShortName}`).querySelector('h3').innerText = form.elements['name'].value;
+                document.getElementById(`ip-${vmShortName}`).innerText = form.elements['ip_address'].value;
+                document.getElementById(`ssh-username-${vmShortName}`).innerText = form.elements['ssh_username'].value;
+                document.getElementById(`description-${vmShortName}`).innerText = form.elements['description'].value || 'N/A';
+                
+                setTimeout(closeEditVMDetailsModal, 2000);
+            } else {
+                feedbackDiv.className = "flashes error";
+                feedbackDiv.innerText = data.message;
+                if (data.errors) {
+                    for (const field in data.errors) {
+                        feedbackDiv.innerText += `\n${field}: ${data.errors[field].join(', ')}`;
+                    }
+                }
+                feedbackDiv.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Error updating VM details:', error);
+            feedbackDiv.className = "flashes error";
+            feedbackDiv.innerText = "Network error or server unreachable.";
+            feedbackDiv.style.display = 'block';
+        });
+    });
+
+    // Handle Add VM form submission via AJAX
+    document.getElementById('addVMForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const form = this;
+        const feedbackDiv = document.getElementById('add-vm-feedback');
+        feedbackDiv.style.display = 'none';
+        feedbackDiv.innerText = '';
+
+        fetch(form.action, {
+            method: form.method,
+            body: new FormData(form),
+            headers: {}
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success") {
+                feedbackDiv.className = "flashes success";
+                feedbackDiv.innerText = data.message;
+                feedbackDiv.style.display = 'block';
+                // Reload the page to show the new VM
+                window.location.reload(); 
+            } else {
+                feedbackDiv.className = "flashes error";
+                feedbackDiv.innerText = data.message;
+                if (data.errors) {
+                    for (const field in data.errors) {
+                        feedbackDiv.innerText += `\n${field}: ${data.errors[field].join(', ')}`;
+                    }
+                }
+                feedbackDiv.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Error adding VM:', error);
+            feedbackDiv.className = "flashes error";
+            feedbackDiv.innerText = "Network error or server unreachable.";
+            feedbackDiv.style.display = 'block';
+        });
+    });
+});
+
+// Add VM Modal functions
+function openAddVMModal() {
+    const modal = document.getElementById('addVMModal');
+    document.getElementById('addVMForm').reset();
+    document.getElementById('add-vm-feedback').style.display = 'none';
+    document.getElementById('add-vm-feedback').innerText = '';
+    modal.style.display = 'block';
+}
+
+function closeAddVMModal() {
+    document.getElementById('addVMModal').style.display = 'none';
+}
+
+// Modal functions for full VM details edit
+function openEditVMDetailsModal(vmShortName, vmName, currentIp, sshUsername, description) {
+    const modal = document.getElementById('editVMDetailsModal');
+    document.getElementById('edit-modal-vm-short-name').value = vmShortName;
+    document.getElementById('edit_name').value = vmName;
+    document.getElementById('edit_ip_address').value = currentIp;
+    document.getElementById('edit_ssh_username').value = sshUsername;
+    document.getElementById('edit_ssh_password').value = '';
+    document.getElementById('edit_description').value = description;
+
+    document.getElementById('edit-vm-feedback').style.display = 'none';
+    document.getElementById('edit-vm-feedback').innerText = '';
+    modal.style.display = 'block';
+}
+
+function closeEditVMDetailsModal() {
+    document.getElementById('editVMDetailsModal').style.display = 'none';
+}
+
+// Close the modal if the user clicks outside of it
+window.onclick = function(event) {
+  const addModal = document.getElementById('addVMModal');
+  const editModal = document.getElementById('editVMDetailsModal');
+  if (event.target == addModal) {
+    addModal.style.display = "none";
+  }
+  if (event.target == editModal) {
+    editModal.style.display = "none";
+  }
+}
+
+// Delete VM function
+function deleteVM(vmShortName, vmName) {
+    if (!confirm(`Are you sure you want to delete the VM '${vmName}' (${vmShortName})? This action cannot be undone.`)) {
+        return;
+    }
+
+    fetch("/delete-vm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vm_short_name: vmShortName })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "success") {
+            alert(`VM '${vmName}' deleted successfully.`);
+            // SocketIO 'vm_deleted' event will handle actual card removal
+        } else {
+            alert(`Failed to delete VM '${vmName}': ${data.message || 'Unknown error'}`);
+        }
+    })
+    .catch(err => {
+        console.error("Fetch error:", err);
+        alert("Error contacting the server or network issue: " + err.message);
+    });
+}
+
+function toggleMonitoring(vmShortName) {
+  const button = document.getElementById(`monitor-${vmShortName}`);
+  const currentMonitoringStatus = monitoringState[vmShortName];
+  
+  // Determine the new state and action
+  const newStatus = currentMonitoringStatus ? 'online' : 'monitoring';
+  const action = currentMonitoringStatus ? "stop-monitoring" : "start-monitoring";
+
+  // Optimistically update the UI immediately
+  monitoringState[vmShortName] = !currentMonitoringStatus;
+  if (newStatus === 'monitoring') {
+    lockedMonitoringVMs.add(vmShortName); // Lock this VM in monitoring state
+  } else {
+    lockedMonitoringVMs.delete(vmShortName); // Unlock when stopping
+  }
+  updateCardUI(vmShortName, newStatus);
+  button.disabled = true; // Disable button during request
+
+  // Send request to server
+  fetch(`/${action}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ vm: vmShortName })
+  })
+  .then(response => response.json())
+  .then(data => {
+    button.disabled = false; // Re-enable button
+    
+    if (data.status !== "started" && data.status !== "stopped") {
+      // If server reports failure, revert our optimistic update
+      monitoringState[vmShortName] = currentMonitoringStatus;
+      if (currentMonitoringStatus) {
+        lockedMonitoringVMs.add(vmShortName);
+      } else {
+        lockedMonitoringVMs.delete(vmShortName);
+      }
+      updateCardUI(vmShortName, currentMonitoringStatus ? 'monitoring' : 'online');
+      alert(`Error: ${data.message || 'Unknown error'}`);
+    }
+    // If success, do nothing - our optimistic update stays
+  })
+  .catch(err => {
+    console.error("Fetch error:", err);
+    // On error, revert our optimistic update
+    monitoringState[vmShortName] = currentMonitoringStatus;
+    if (currentMonitoringStatus) {
+      lockedMonitoringVMs.add(vmShortName);
+    } else {
+      lockedMonitoringVMs.delete(vmShortName);
+    }
+    updateCardUI(vmShortName, currentMonitoringStatus ? 'monitoring' : 'online');
+    button.disabled = false;
+    alert("Network error: " + err.message);
+  });
+}
+
+function shutdownVM(vmShortName) {
+  if (!confirm(`Are you sure you want to shut down ${vmShortName}?`)) return;
+
+  const button = document.getElementById(`shutdown-${vmShortName}`); 
+  const monitorButton = document.getElementById(`monitor-${vmShortName}`);
+  
+  if (button) {
+      button.disabled = true; 
+      button.innerText = 'Shutting Down...';
+  }
+  if (monitorButton) {
+      monitorButton.disabled = true;
+  }
+  
+  // Always remove from locked state when shutting down
+  lockedMonitoringVMs.delete(vmShortName);
+
+  fetch("/shutdown-vm", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ vm: vmShortName })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === "shutdown") {
+      alert(`${vmShortName} has been shut down`);
+      // The status will update to 'offline' via SocketIO
+    } else {
+      alert(`Shutdown failed: ${data.message || 'Unknown error'}`);
+      if (button) button.disabled = false;
+      if (monitorButton) monitorButton.disabled = false;
+      // If it was monitoring before shutdown attempt, re-lock it
+      if (monitoringState[vmShortName]) {
+        lockedMonitoringVMs.add(vmShortName);
+      }
+    }
+  })
+  .catch(err => {
+    console.error("Fetch error:", err);
+    alert("Error contacting the server or network issue: " + err.message);
+    if (button) button.disabled = false;
+    if (monitorButton) monitorButton.disabled = false;
+    // Revert locked state if it was monitoring
+    if (monitoringState[vmShortName]) {
+      lockedMonitoringVMs.add(vmShortName);
+    }
+  });
+}
+
+function updateCardUI(vmShortName, currentStatus) {
+  const card = document.getElementById(`vm-${vmShortName}`);
+  const statusSpan = document.getElementById(`status-${vmShortName}`);
+  const monitorButton = document.getElementById(`monitor-${vmShortName}`);
+
+  if (!card || !statusSpan || !monitorButton) return;
+
+  // Clear all status classes first
+  card.classList.remove('vm-online', 'vm-offline', 'vm-monitoring');
+
+  // Apply the correct class and update button text/state
+  if (currentStatus === 'online') {
+    card.classList.add('vm-online');
+    statusSpan.innerText = 'Online';
+    monitorButton.innerText = 'Start Monitoring';
+    monitoringState[vmShortName] = false; // Ensure local state matches UI
+    monitorButton.disabled = false;
+  } else if (currentStatus === 'monitoring') {
+    card.classList.add('vm-monitoring');
+    statusSpan.innerText = 'Monitoring';
+    monitorButton.innerText = 'Stop Monitoring';
+    monitoringState[vmShortName] = true; // Ensure local state matches UI
+    monitorButton.disabled = false;
+  } else if (currentStatus === 'offline') {
+    card.classList.add('vm-offline');
+    statusSpan.innerText = 'Offline';
+    monitorButton.innerText = 'Offline';
+    monitoringState[vmShortName] = false; // Ensure local state matches UI
+    monitorButton.disabled = true;
+  }
+}
 </script>
-<style>
-    /* Add styles for 'info' flash messages if needed */
-    .flashes.info {
-        background-color: #2196f3a8; /* A shade of blue */
-        color: #e3f2fd;
-        box-shadow: 0 0 12px #2196f3a8;
-    }
-
-    /* Basic styling for the select dropdown */
-    #vmSelect {
-        appearance: none; /* Remove default arrow */
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23bbdefb%22%20d%3D%22M287%2C114.7L146.2%2C255.5L5.4%2C114.7H287z%22%2F%3E%3C%2Fsvg%3E'); /* Custom arrow */
-        background-repeat: no-repeat;
-        background-position: right 10px center;
-        background-size: 16px;
-        padding-right: 30px; /* Space for the arrow */
-    }
-
-    /* Spinner CSS */
-    .spinner {
-        border: 4px solid rgba(255, 255, 255, 0.3);
-        border-top: 4px solid #bbdefb;
-        border-radius: 50%;
-        width: 20px;
-        height: 20px;
-        animation: spin 1s linear infinite;
-        display: inline-block;
-        vertical-align: middle;
-        margin-right: 10px;
-    }
-
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-
-    /* NEW: Collapsible Output Styles */
-    .collapsible-output {
-        max-height: 150px; /* Initial collapsed height */
-        overflow-y: auto; /* Enable scrolling when content exceeds max-height */
-        transition: max-height 0.3s ease-out; /* Smooth transition for expand/collapse */
-        border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
-        padding: 10px;
-        border-radius: 8px;
-        margin-top: 10px;
-    }
-
-    .collapsible-output.collapsed {
-        max-height: 150px; /* Explicitly set for collapsed state */
-    }
-
-    .collapsible-output:not(.collapsed) {
-        max-height: 500px; /* Expanded height (adjust as needed) */
-        /* You could also set max-height to a very large value like 9999px for "auto" effect */
-    }
-</style>
 {% endblock %}

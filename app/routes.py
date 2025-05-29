@@ -15,13 +15,24 @@ from flask_socketio import emit
 from sqlalchemy.orm import sessionmaker
 import os 
 
-# FIX: Changed import statement from 'from mitigation_utils' to 'from .mitigation_utils'
+# Import MitigationUtility
 from .mitigation_utils import MitigationUtility, MitigationAction
+
+# NEW: Import AnomalyDetectionAgent and pika for RabbitMQ consumer
+from agents.anomaly_detection_agent import AnomalyDetectionAgent, IncidentDescription
+import pika
+import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Create a Blueprint for main routes
 main = Blueprint('main', __name__)
 
-# Removed global mitigation_utility and setup_mitigation_utility as it's now handled in __init__.py
+# Global variables for anomaly detection background threads
+anomaly_detection_thread = None
+anomaly_consumer_thread = None
+anomaly_thread_lock = Lock()
 
 
 @main.route('/')
@@ -478,12 +489,17 @@ def _check_single_vm_status(app, vm_short_name, status_dict):
 @socketio.on('connect', namespace='/')
 def test_connect(*args):
     """Handles new SocketIO connections."""
-    global thread
-    with thread_lock:
-        # Start background monitoring thread if it's not already running
+    global thread, anomaly_consumer_thread # Include anomaly_consumer_thread
+    with thread_lock: # Use the same lock for all background threads for simplicity
+        # Start VM status monitoring thread if it's not already running
         if thread is None:
             thread = socketio.start_background_task(target=background_vm_status_monitor, app=current_app._get_current_object())
         
+        # NEW: Start RabbitMQ anomaly consumer thread if not already running
+        if anomaly_consumer_thread is None:
+            anomaly_consumer_thread = socketio.start_background_task(target=rabbitmq_anomaly_consumer, app=current_app._get_current_object())
+            logger.info("RabbitMQ anomaly consumer thread started.")
+
     with current_app.app_context():
         # Emit initial VM statuses to the newly connected client
         if current_user.is_authenticated:
@@ -503,7 +519,7 @@ def test_disconnect():
     """Handles SocketIO disconnections (placeholder)."""
     pass
 
-# NEW: Route for Mitigation Agent Interaction Page
+# Route for Mitigation Agent Interaction Page
 @main.route("/mitigation-agent-interaction")
 @login_required
 def mitigation_agent_interaction():
@@ -512,7 +528,7 @@ def mitigation_agent_interaction():
     # Pass VMs to the template so the user can select one to interact with
     return render_template("mitigation_agent_interaction.html", vms=vms)
 
-# NEW: SocketIO event for generating mitigation commands
+# SocketIO event for generating mitigation commands
 @socketio.on('generate_mitigation', namespace='/')
 @login_required
 def handle_generate_mitigation(data):
@@ -540,7 +556,7 @@ def handle_generate_mitigation(data):
     except Exception as e:
         emit('mitigation_response', {'status': 'error', 'message': f'Error generating mitigation: {str(e)}'})
 
-# NEW: SocketIO event for executing mitigation commands
+# SocketIO event for executing mitigation commands
 @socketio.on('execute_commands', namespace='/')
 @login_required
 def handle_execute_commands(data):
@@ -581,4 +597,176 @@ def handle_execute_commands(data):
             })
         except Exception as e:
             emit('execution_response', {'status': 'error', 'message': f'Error executing commands: {str(e)}'})
+
+
+# NEW: Route for Anomaly Detection Page
+@main.route("/anomaly-detection")
+@login_required
+def anomaly_detection():
+    """Renders the page for anomaly detection."""
+    # We might want to fetch initial anomalies from DB here, or just let SocketIO populate
+    return render_template("anomaly_detection.html")
+
+# NEW: SocketIO event to start anomaly sweep
+@socketio.on('start_anomaly_sweep', namespace='/')
+@login_required
+def handle_start_anomaly_sweep():
+    """
+    Starts the anomaly detection agent as a background process.
+    """
+    global anomaly_detection_thread
+    with anomaly_thread_lock:
+        if anomaly_detection_thread and anomaly_detection_thread.is_alive():
+            emit('anomaly_sweep_status', {'status': 'info', 'message': 'Anomaly detection sweep is already running.'})
+            return
+
+        # Start the anomaly detection agent as a separate process
+        # Ensure the path to anomaly_detection_agent.py is correct
+        command = ["python", "/home/anis/PFE/agents/anomaly_detection_agent.py"]
+        try:
+            # Using Popen to run it detached, so it doesn't block the Flask process
+            # and doesn't get killed if the Flask process reloads.
+            # stdout=subprocess.PIPE, stderr=subprocess.PIPE can be used for logging,
+            # but for now, we'll let it run independently.
+            subprocess.Popen(command, cwd="/home/anis/PFE/") # Run from project root
+            emit('anomaly_sweep_status', {'status': 'success', 'message': 'Anomaly detection sweep started.'})
+            logger.info("Anomaly detection agent process launched.")
+        except FileNotFoundError:
+            emit('anomaly_sweep_status', {'status': 'error', 'message': 'Python or anomaly_detection_agent.py not found.'})
+            logger.error("Failed to launch anomaly detection agent: File not found.")
+        except Exception as e:
+            emit('anomaly_sweep_status', {'status': 'error', 'message': f'Error launching anomaly detection: {str(e)}'})
+            logger.error(f"Error launching anomaly detection agent: {e}")
+
+# NEW: RabbitMQ Consumer as a background task
+def rabbitmq_anomaly_consumer(app):
+    """
+    Consumes anomaly messages from RabbitMQ and emits them via SocketIO.
+    Runs in a separate thread.
+    """
+    connection = None
+    try:
+        connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+        channel = connection.channel()
+        channel.queue_declare(queue='anomaly_queue', durable=True)
+        logger.info('RabbitMQ consumer started. Waiting for messages...')
+
+        def callback(ch, method, properties, body):
+            try:
+                anomaly_data = json.loads(body)
+                logger.info(f"Received anomaly message: {anomaly_data}")
+                with app.app_context():
+                    # Emit to all connected clients in the '/anomaly' namespace
+                    # Or to the default namespace if no specific namespace is used
+                    socketio.emit('new_anomaly', anomaly_data, namespace='/')
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to decode JSON from RabbitMQ message: {e} - Body: {body}")
+                ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False) # Nack bad messages
+            except Exception as e:
+                logger.error(f"Error processing RabbitMQ message: {e}")
+                ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False) # Nack on other errors
+
+        channel.basic_consume(queue='anomaly_queue', on_message_callback=callback, auto_ack=False)
+        channel.start_consuming()
+    except pika.exceptions.AMQPConnectionError as e:
+        logger.error(f"RabbitMQ connection error in consumer: {e}")
+    except Exception as e:
+        logger.error(f"Unhandled error in RabbitMQ consumer: {e}")
+    finally:
+        if connection and not connection.is_closed:
+            connection.close()
+            logger.info("RabbitMQ consumer connection closed.")
+
+# NEW: SocketIO event for approving mitigation
+@socketio.on('approve_mitigation', namespace='/')
+@login_required
+def handle_approve_mitigation(data):
+    """
+    Handles user approval of a proposed mitigation action.
+    Sends the commands to the MitigationUtility for execution.
+    """
+    incident_description = data.get('incident_description')
+    commands = data.get('commands')
+    src_ip = data.get('src_ip')
+    dst_ip = data.get('dst_ip')
+    anomaly_type = data.get('anomaly_type')
+
+    if not commands:
+        emit('mitigation_approval_status', {'status': 'error', 'message': 'No commands provided for mitigation.'})
+        return
+
+    mitigation_utility_instance = current_app.mitigation_utility
+    if not mitigation_utility_instance:
+        emit('mitigation_approval_status', {'status': 'error', 'message': 'Mitigation agent not initialized. Cannot execute.'})
+        return
+
+    # For simplicity, we'll assume a target VM for now.
+    # In a real scenario, you'd need to determine the target VM based on src_ip/dst_ip or user input.
+    # For now, let's pick the first available VM or a default one if needed.
+    # This part needs careful consideration based on your VM management.
+    # For demonstration, let's assume we execute on 'lubuntu' if it's the source or destination.
+    # Or, if no specific VM is identified, we might need a general "firewall" VM.
+    
+    # A more robust solution would involve:
+    # 1. Storing VM details with the anomaly if it's VM-specific.
+    # 2. Allowing the user to select a target VM for the mitigation.
+    # For now, let's try to map to a VM based on IP if possible, or use a default.
+
+    target_vm = None
+    with current_app.app_context():
+        # Try to find a VM matching source or destination IP
+        if src_ip:
+            target_vm = VM.query.filter_by(ip_address=src_ip, user_id=current_user.id).first()
+        if not target_vm and dst_ip:
+            target_vm = VM.query.filter_by(ip_address=dst_ip, user_id=current_user.id).first()
+        
+        # Fallback to a predefined VM if no specific VM is found by IP
+        # You might want to make this configurable or require user selection
+        if not target_vm:
+            # Example: Try to find a VM named 'lubuntu' or 'kali'
+            target_vm = VM.query.filter_by(short_name='lubuntu', user_id=current_user.id).first()
+            if not target_vm:
+                target_vm = VM.query.filter_by(short_name='kali', user_id=current_user.id).first()
+
+    if not target_vm:
+        emit('mitigation_approval_status', {'status': 'error', 'message': 'Could not determine a target VM for mitigation. Please execute manually.'})
+        return
+    
+    if not target_vm.ssh_password:
+        emit('mitigation_approval_status', {'status': 'error', 'message': f'SSH password not set for VM {target_vm.name}. Cannot execute commands.'})
+        return
+
+    try:
+        # Execute commands using the MitigationUtility
+        results = mitigation_utility_instance.execute_mitigation_commands(
+            target_vm.ip_address, target_vm.ssh_username, target_vm.ssh_password, commands
+        )
+        # Summarize results for the user
+        success_count = sum(1 for s, m in results if s)
+        fail_count = len(results) - success_count
+        overall_status = 'success' if fail_count == 0 else 'partial_success'
+        message = f"Mitigation for '{anomaly_type}' on {target_vm.name} completed. {success_count} commands succeeded, {fail_count} failed."
+        
+        emit('mitigation_approval_status', {
+            'status': overall_status,
+            'message': message,
+            'details': results # Send full results for detailed display
+        })
+        logger.info(f"Mitigation for anomaly '{anomaly_type}' approved and executed on {target_vm.name}.")
+
+    except Exception as e:
+        emit('mitigation_approval_status', {'status': 'error', 'message': f'Error executing approved mitigation: {str(e)}'})
+        logger.error(f"Error executing approved mitigation for anomaly: {e}")
+
+# NEW: SocketIO event for denying mitigation
+@socketio.on('deny_mitigation', namespace='/')
+@login_required
+def handle_deny_mitigation(data):
+    """
+    Handles user denial of a proposed mitigation action.
+    """
+    anomaly_type = data.get('anomaly_type', 'Unknown Anomaly')
+    emit('mitigation_approval_status', {'status': 'info', 'message': f'Mitigation for "{anomaly_type}" denied by user.'})
+    logger.info(f"Mitigation for anomaly '{anomaly_type}' denied by user.")
 

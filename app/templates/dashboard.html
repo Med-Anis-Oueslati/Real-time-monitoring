@@ -23,11 +23,16 @@
       <p>Start monitoring on available virtual machines.</p>
       <a href="{{ url_for('main.vm_monitoring') }}" class="btn primary">Go</a>
     </div>
-    {# NEW CARD FOR MITIGATION AGENT INTERACTION #}
     <div class="card">
       <h3>Mitigation Agent Interaction</h3>
       <p>Manually generate and execute mitigation commands.</p>
       <a href="{{ url_for('main.mitigation_agent_interaction') }}" class="btn primary">Go</a>
+    </div>
+    {# NEW CARD FOR ANOMALY DETECTION #}
+    <div class="card">
+      <h3>Anomaly Detection</h3>
+      <p>Initiate a sweep for anomalies and review findings.</p>
+      <a href="{{ url_for('main.anomaly_detection') }}" class="btn primary">Go</a>
     </div>
   </div>
 </div>

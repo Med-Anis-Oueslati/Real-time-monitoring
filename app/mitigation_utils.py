@@ -214,4 +214,3 @@ class MitigationUtility:
             success, message = self.execute_ssh_command(vm_ip, vm_username, vm_password, command, sudo_pass=vm_password)
             results.append((success, message))
         return results
-

@@ -250,7 +250,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 });
-
     // Listen for 'vm_deleted' event
     socket.on('vm_deleted', (data) => {
         const vmShortName = data.short_name;
@@ -426,7 +425,7 @@ function toggleMonitoring(vmShortName) {
   
   // Determine the new state and action
   const newStatus = currentMonitoringStatus ? 'online' : 'monitoring';
-  const action = currentMonitoringStatus ? "stop-monitoring" : "start-monitoring";
+  const action = currentMonitoringStatus ? "stop-monitoring" : "start-monitoring"; // Fixed typo here
 
   // Optimistically update the UI immediately
   monitoringState[vmShortName] = !currentMonitoringStatus;

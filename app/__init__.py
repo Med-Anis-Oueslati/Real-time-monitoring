@@ -3,22 +3,25 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
 from flask_login import LoginManager # Import LoginManager
 from .forms import LogoutForm
+from flask_socketio import SocketIO
 import os
 
 db = SQLAlchemy()
 csrf = CSRFProtect()
 login_manager = LoginManager() # Initialize LoginManager
+socketio = SocketIO()
 
 def create_app():
     app = Flask(__name__)
     # It's highly recommended to use environment variables for SECRET_KEY in production
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "q;hsjdvb;khb23RkhvqsdqA23blqksdhvb213bkhsvdb")
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////home/anis/PFE/instance/site.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)
     csrf.init_app(app)
     login_manager.init_app(app) # Initialize Flask-Login with the app
+    socketio.init_app(app)
     login_manager.login_view = 'main.login' # Set the login view for @login_required decorator
 
     from .models import User # Import User model here to avoid circular dependency with routes

@@ -15,3 +15,5 @@ kafka-connect-plugins/
 agents/__pycache__/
 agents/*.log
 pgadmin_data/
+instance/
+app/__pycache__/

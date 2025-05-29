@@ -1,51 +1,144 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>Available Virtual Machines</h2>
+<h1>Virtual Machine Monitoring Dashboard</h1>
+<div class="header-actions">
+  <button class="btn primary" onclick="openAddVMModal()">Add New VM</button>
+</div>
 
 <div class="cards">
   {% if vms %}
     {% for vm in vms %}
     <div class="card" id="vm-{{ vm.short_name }}">
       <h3>{{ vm.name }}</h3>
-      <p>IP Address: <span id="ip-{{ vm.short_name }}">{{ vm.ip_address }}</span></p> {# Display current IP #}
+      <p>IP Address: <span id="ip-{{ vm.short_name }}">{{ vm.ip_address }}</span></p>
+      <p>SSH Username: <span id="ssh-username-{{ vm.short_name }}">{{ vm.ssh_username }}</span></p>
+      <p>Description: <span id="description-{{ vm.short_name }}">{{ vm.description if vm.description else 'N/A' }}</span></p>
       <p>Current Status: <span id="status-{{ vm.short_name }}">Checking...</span></p>
       <div class="card-buttons">
         <button id="monitor-{{ vm.short_name }}" class="btn primary" onclick="toggleMonitoring('{{ vm.short_name }}')">Start Monitoring</button> <br><br>
-        <button class="btn primary" onclick="shutdownVM('{{ vm.short_name }}')">Shutdown</button><br><br>
-        <button class="btn secondary" onclick="openEditIPModal('{{ vm.short_name }}', '{{ vm.ip_address }}')">Edit IP</button> {# NEW: Edit IP button #}
+        <button id="shutdown-{{ vm.short_name }}" class="btn primary" onclick="shutdownVM('{{ vm.short_name }}')">Shutdown</button><br><br>
+        <button class="btn secondary" onclick="openEditVMDetailsModal(
+            '{{ vm.short_name }}',
+            '{{ vm.name }}',
+            '{{ vm.ip_address }}',
+            '{{ vm.ssh_username }}',
+            '{{ vm.description | default('') }}'
+        )">Edit Details</button>
+        <button class="btn danger" onclick="deleteVM('{{ vm.short_name }}', '{{ vm.name }}')">Delete</button>
       </div>
     </div>
     {% endfor %}
   {% else %}
-    <p>No virtual machines configured yet. Please add VMs through the backend.</p>
+    <p>No virtual machines configured yet. Click "Add New VM" to get started.</p>
   {% endif %}
 </div>
 
-{# NEW: Edit IP Modal/Form (no changes) #}
-<div id="editIPModal" class="modal">
+{# NEW: Add VM Modal #}
+<div id="addVMModal" class="modal">
   <div class="modal-content form-container">
-    <span class="close-button" onclick="closeEditIPModal()">&times;</span>
-    <h2>Edit VM IP Address</h2>
-    <form id="editIPForm" method="POST" action="{{ url_for('main.update_vm_ip') }}">
-        {{ edit_form.hidden_tag() }}
-        <input type="hidden" id="modal-vm-short-name" name="vm_short_name" value="">
+    <span class="close-button" onclick="closeAddVMModal()">&times;</span>
+    <h2>Add New Virtual Machine</h2>
+    <form id="addVMForm" method="POST" action="{{ url_for('main.add_vm') }}">
+        {{ add_form.hidden_tag() }}
         <div class="form-group">
-            {{ edit_form.ip_address(size=15, placeholder=" ") }}
+            {{ add_form.name(size=32, placeholder=" ") }}
+            {{ add_form.name.label }}
+            {% if add_form.name.errors %}
+                <ul class="errors">{% for error in add_form.name.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ add_form.short_name(size=32, placeholder=" ") }}
+            {{ add_form.short_name.label }}
+            {% if add_form.short_name.errors %}
+                <ul class="errors">{% for error in add_form.short_name.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ add_form.ip_address(size=15, placeholder=" ") }}
+            {{ add_form.ip_address.label }}
+            {% if add_form.ip_address.errors %}
+                <ul class="errors">{% for error in add_form.ip_address.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ add_form.ssh_username(size=32, placeholder=" ") }}
+            {{ add_form.ssh_username.label }}
+            {% if add_form.ssh_username.errors %}
+                <ul class="errors">{% for error in add_form.ssh_username.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ add_form.ssh_password(size=32, placeholder=" ") }}
+            {{ add_form.ssh_password.label }}
+            {% if add_form.ssh_password.errors %}
+                <ul class="errors">{% for error in add_form.ssh_password.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ add_form.description(rows=3, placeholder=" ") }}
+            {{ add_form.description.label }}
+            {% if add_form.description.errors %}
+                <ul class="errors">{% for error in add_form.description.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ add_form.submit(class_="btn primary") }}
+        </div>
+    </form>
+    <div id="add-vm-feedback" class="flashes" style="display:none;"></div>
+  </div>
+</div>
+
+{# MODIFIED: Edit VM Details Modal/Form (formerly editIPModal) #}
+<div id="editVMDetailsModal" class="modal">
+  <div class="modal-content form-container">
+    <span class="close-button" onclick="closeEditVMDetailsModal()">&times;</span>
+    <h2>Edit VM Details</h2>
+    <form id="editVMDetailsForm" method="POST" action="{{ url_for('main.edit_vm_details') }}">
+        {{ edit_form.hidden_tag() }}
+        <input type="hidden" id="edit-modal-vm-short-name" name="vm_short_name" value="">
+        <div class="form-group">
+            {{ edit_form.name(size=32, placeholder=" ", id="edit_name") }}
+            {{ edit_form.name.label }}
+            {% if edit_form.name.errors %}
+                <ul class="errors">{% for error in edit_form.name.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ edit_form.ip_address(size=15, placeholder=" ", id="edit_ip_address") }}
             {{ edit_form.ip_address.label }}
             {% if edit_form.ip_address.errors %}
-                <ul class="errors">
-                    {% for error in edit_form.ip_address.errors %}
-                    <li>{{ error }}</li>
-                    {% endfor %}
-                </ul>
+                <ul class="errors">{% for error in edit_form.ip_address.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ edit_form.ssh_username(size=32, placeholder=" ", id="edit_ssh_username") }}
+            {{ edit_form.ssh_username.label }}
+            {% if edit_form.ssh_username.errors %}
+                <ul class="errors">{% for error in edit_form.ssh_username.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ edit_form.ssh_password(size=32, placeholder="Leave blank to keep current", id="edit_ssh_password") }}
+            {{ edit_form.ssh_password.label }}
+            {% if edit_form.ssh_password.errors %}
+                <ul class="errors">{% for error in edit_form.ssh_password.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ edit_form.description(rows=3, placeholder=" ", id="edit_description") }}
+            {{ edit_form.description.label }}
+            {% if edit_form.description.errors %}
+                <ul class="errors">{% for error in edit_form.description.errors %}<li>{{ error }}</li>{% endfor %}</ul>
             {% endif %}
         </div>
         <div class="form-group">
             {{ edit_form.submit(class_="btn primary") }}
         </div>
     </form>
-    <div id="edit-ip-feedback" class="flashes" style="display:none;"></div>
+    <div id="edit-vm-feedback" class="flashes" style="display:none;"></div>
   </div>
 </div>
 <style>
@@ -89,40 +182,99 @@
   .modal .form-group {
     margin-bottom: 1.5rem; /* Adjust spacing inside modal form */
   }
-  .modal .btn.primary {
+  .modal .btn.primary,
+  .modal .btn.danger { /* NEW: styling for danger button in modal */
     width: auto; /* Don't make modal buttons full width */
     padding: 10px 25px;
+  }
+  /* NEW: Styles for the "Add New VM" button */
+  .header-actions {
+    margin-bottom: 20px;
+    text-align: right; /* Align button to the right */
+  }
+  /* Optional: Styles for new info in card */
+  .card p {
+    margin-bottom: 5px;
+    font-size: 0.95em;
+  }
+  .card .btn.danger {
+    background-color: #dc3545; /* Red for delete */
+    border-color: #dc3545;
+  }
+  .card .btn.danger:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
   }
 </style>
 
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
 <script>
-// Existing monitoringState, toggleMonitoring, shutdownVM functions (no changes to logic here)
-const monitoringState = {}; 
+// monitoringState is still needed to track the UI's perceived state
+const monitoringState = {};
+// Add a new set to keep track of VMs explicitly put into "monitoring" mode from the UI
+const lockedMonitoringVMs = new Set();
+
+// Initialize SocketIO client
+const socket = io();
 
 document.addEventListener("DOMContentLoaded", () => {
     {% if vms %}
         {% for vm in vms %}
-        monitoringState['{{ vm.short_name }}'] = false;
+        // Initialize monitoringState based on initial DB status, which will be updated by SocketIO
+        // Start with a default, SocketIO will quickly update
+        monitoringState['{{ vm.short_name }}'] = (('{{ vm.status }}' === 'monitoring') || ('{{ vm.status }}' === 'online'));
+        // If the VM's initial status is 'monitoring', lock it
+        if ('{{ vm.status }}' === 'monitoring') {
+            lockedMonitoringVMs.add('{{ vm.short_name }}');
+        }
+        // Initial UI update based on Flask-rendered status (before SocketIO takes over)
+        updateCardUI('{{ vm.short_name }}', '{{ vm.status }}');
         {% endfor %}
     {% endif %}
-    checkVMStatus();
-    setInterval(checkVMStatus, 2000);
 
-    // NEW: Handle Edit IP form submission via AJAX
-    document.getElementById('editIPForm').addEventListener('submit', function(event) {
-        event.preventDefault(); // Prevent default form submission
+    // Listen for 'vm_status_update' events from the server
+    socket.on('vm_status_update', (statuses) => {
+        console.log("Received VM status update:", statuses);
+        for (const vmShortName in statuses) {
+            if (statuses.hasOwnProperty(vmShortName)) {
+                // Only update UI if:
+                // 1. The VM is NOT in locked monitoring state, OR
+                // 2. The status is 'offline' (from shutdown), OR
+                // 3. The status is 'online' AND we're not currently monitoring
+                if (!lockedMonitoringVMs.has(vmShortName) || 
+                    statuses[vmShortName] === 'offline' ||
+                    (statuses[vmShortName] === 'online' && !monitoringState[vmShortName])) {
+                    updateCardUI(vmShortName, statuses[vmShortName]);
+                }
+            }
+        }
+    });
+
+    // Listen for 'vm_deleted' event
+    socket.on('vm_deleted', (data) => {
+        const vmShortName = data.short_name;
+        const vmCard = document.getElementById(`vm-${vmShortName}`);
+        if (vmCard) {
+            vmCard.remove();
+            // Also remove from locked state if it was there
+            lockedMonitoringVMs.delete(vmShortName);
+            console.log(`VM card for ${vmShortName} removed due to deletion event.`);
+        }
+    });
+
+    // Handle Edit VM Details form submission via AJAX
+    document.getElementById('editVMDetailsForm').addEventListener('submit', function(event) {
+        event.preventDefault();
         const form = this;
-        const feedbackDiv = document.getElementById('edit-ip-feedback');
-        feedbackDiv.style.display = 'none'; // Hide previous feedback
+        const feedbackDiv = document.getElementById('edit-vm-feedback');
+        feedbackDiv.style.display = 'none';
+        feedbackDiv.innerText = '';
 
         fetch(form.action, {
             method: form.method,
-            body: new FormData(form), // Use FormData to send form data
-            headers: {
-                // Ensure CSRF token is sent if @csrf.exempt is removed from the backend
-                // "X-CSRFToken": document.querySelector('meta[name="csrf-token"]').content
-            }
+            body: new FormData(form),
+            headers: {}
         })
         .then(response => response.json())
         .then(data => {
@@ -130,11 +282,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 feedbackDiv.className = "flashes success";
                 feedbackDiv.innerText = data.message;
                 feedbackDiv.style.display = 'block';
-                // Update the displayed IP on the card
-                const vmShortName = document.getElementById('modal-vm-short-name').value;
+
+                const vmShortName = document.getElementById('edit-modal-vm-short-name').value;
+                document.getElementById(`vm-${vmShortName}`).querySelector('h3').innerText = form.elements['name'].value;
                 document.getElementById(`ip-${vmShortName}`).innerText = form.elements['ip_address'].value;
-                checkVMStatus(); // Re-check status after IP change
-                setTimeout(closeEditIPModal, 2000); // Close modal after 2 seconds
+                document.getElementById(`ssh-username-${vmShortName}`).innerText = form.elements['ssh_username'].value;
+                document.getElementById(`description-${vmShortName}`).innerText = form.elements['description'].value || 'N/A';
+                
+                setTimeout(closeEditVMDetailsModal, 2000);
             } else {
                 feedbackDiv.className = "flashes error";
                 feedbackDiv.innerText = data.message;
@@ -147,7 +302,47 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         })
         .catch(error => {
-            console.error('Error updating IP:', error);
+            console.error('Error updating VM details:', error);
+            feedbackDiv.className = "flashes error";
+            feedbackDiv.innerText = "Network error or server unreachable.";
+            feedbackDiv.style.display = 'block';
+        });
+    });
+
+    // Handle Add VM form submission via AJAX
+    document.getElementById('addVMForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const form = this;
+        const feedbackDiv = document.getElementById('add-vm-feedback');
+        feedbackDiv.style.display = 'none';
+        feedbackDiv.innerText = '';
+
+        fetch(form.action, {
+            method: form.method,
+            body: new FormData(form),
+            headers: {}
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success") {
+                feedbackDiv.className = "flashes success";
+                feedbackDiv.innerText = data.message;
+                feedbackDiv.style.display = 'block';
+                // Reload the page to show the new VM
+                window.location.reload(); 
+            } else {
+                feedbackDiv.className = "flashes error";
+                feedbackDiv.innerText = data.message;
+                if (data.errors) {
+                    for (const field in data.errors) {
+                        feedbackDiv.innerText += `\n${field}: ${data.errors[field].join(', ')}`;
+                    }
+                }
+                feedbackDiv.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Error adding VM:', error);
             feedbackDiv.className = "flashes error";
             feedbackDiv.innerText = "Network error or server unreachable.";
             feedbackDiv.style.display = 'block';
@@ -155,34 +350,95 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-// NEW: Modal functions
-function openEditIPModal(vmShortName, currentIp) {
-    const modal = document.getElementById('editIPModal');
-    document.getElementById('modal-vm-short-name').value = vmShortName;
-    document.getElementById('ip_address').value = currentIp; // Set current IP in the input field
-    document.getElementById('edit-ip-feedback').style.display = 'none'; // Clear previous feedback
-    document.getElementById('edit-ip-feedback').innerText = ''; // Clear previous text
+// Add VM Modal functions
+function openAddVMModal() {
+    const modal = document.getElementById('addVMModal');
+    document.getElementById('addVMForm').reset();
+    document.getElementById('add-vm-feedback').style.display = 'none';
+    document.getElementById('add-vm-feedback').innerText = '';
     modal.style.display = 'block';
 }
 
-function closeEditIPModal() {
-    document.getElementById('editIPModal').style.display = 'none';
+function closeAddVMModal() {
+    document.getElementById('addVMModal').style.display = 'none';
+}
+
+// Modal functions for full VM details edit
+function openEditVMDetailsModal(vmShortName, vmName, currentIp, sshUsername, description) {
+    const modal = document.getElementById('editVMDetailsModal');
+    document.getElementById('edit-modal-vm-short-name').value = vmShortName;
+    document.getElementById('edit_name').value = vmName;
+    document.getElementById('edit_ip_address').value = currentIp;
+    document.getElementById('edit_ssh_username').value = sshUsername;
+    document.getElementById('edit_ssh_password').value = '';
+    document.getElementById('edit_description').value = description;
+
+    document.getElementById('edit-vm-feedback').style.display = 'none';
+    document.getElementById('edit-vm-feedback').innerText = '';
+    modal.style.display = 'block';
+}
+
+function closeEditVMDetailsModal() {
+    document.getElementById('editVMDetailsModal').style.display = 'none';
 }
 
 // Close the modal if the user clicks outside of it
 window.onclick = function(event) {
-  const modal = document.getElementById('editIPModal');
-  if (event.target == modal) {
-    modal.style.display = "none";
+  const addModal = document.getElementById('addVMModal');
+  const editModal = document.getElementById('editVMDetailsModal');
+  if (event.target == addModal) {
+    addModal.style.display = "none";
+  }
+  if (event.target == editModal) {
+    editModal.style.display = "none";
   }
 }
 
-// The rest of the functions (toggleMonitoring, shutdownVM, updateCardUI, checkVMStatus)
-// remain largely the same, but ensure they refer to vmShortName as the identifier
-// and that `updateCardUI` also updates the displayed IP if needed.
+// Delete VM function
+function deleteVM(vmShortName, vmName) {
+    if (!confirm(`Are you sure you want to delete the VM '${vmName}' (${vmShortName})? This action cannot be undone.`)) {
+        return;
+    }
+
+    fetch("/delete-vm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vm_short_name: vmShortName })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "success") {
+            alert(`VM '${vmName}' deleted successfully.`);
+            // SocketIO 'vm_deleted' event will handle actual card removal
+        } else {
+            alert(`Failed to delete VM '${vmName}': ${data.message || 'Unknown error'}`);
+        }
+    })
+    .catch(err => {
+        console.error("Fetch error:", err);
+        alert("Error contacting the server or network issue: " + err.message);
+    });
+}
 
 function toggleMonitoring(vmShortName) {
-  const action = monitoringState[vmShortName] ? "stop-monitoring" : "start-monitoring";
+  const button = document.getElementById(`monitor-${vmShortName}`);
+  const currentMonitoringStatus = monitoringState[vmShortName];
+  
+  // Determine the new state and action
+  const newStatus = currentMonitoringStatus ? 'online' : 'monitoring';
+  const action = currentMonitoringStatus ? "stop-monitoring" : "start-monitoring";
+
+  // Optimistically update the UI immediately
+  monitoringState[vmShortName] = !currentMonitoringStatus;
+  if (newStatus === 'monitoring') {
+    lockedMonitoringVMs.add(vmShortName); // Lock this VM in monitoring state
+  } else {
+    lockedMonitoringVMs.delete(vmShortName); // Unlock when stopping
+  }
+  updateCardUI(vmShortName, newStatus);
+  button.disabled = true; // Disable button during request
+
+  // Send request to server
   fetch(`/${action}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -190,23 +446,52 @@ function toggleMonitoring(vmShortName) {
   })
   .then(response => response.json())
   .then(data => {
-    if (data.status === "started" || data.status === "stopped") {
-      monitoringState[vmShortName] = (data.status === "started");
-      updateCardUI(vmShortName, data.status === "started" ? 'monitoring' : 'online'); // Update UI
-      alert(`${vmShortName} monitoring ${data.status}`);
-    } else {
+    button.disabled = false; // Re-enable button
+    
+    if (data.status !== "started" && data.status !== "stopped") {
+      // If server reports failure, revert our optimistic update
+      monitoringState[vmShortName] = currentMonitoringStatus;
+      if (currentMonitoringStatus) {
+        lockedMonitoringVMs.add(vmShortName);
+      } else {
+        lockedMonitoringVMs.delete(vmShortName);
+      }
+      updateCardUI(vmShortName, currentMonitoringStatus ? 'monitoring' : 'online');
       alert(`Error: ${data.message || 'Unknown error'}`);
     }
-    checkVMStatus();
+    // If success, do nothing - our optimistic update stays
   })
   .catch(err => {
     console.error("Fetch error:", err);
-    alert("Error contacting the server or network issue: " + err.message);
+    // On error, revert our optimistic update
+    monitoringState[vmShortName] = currentMonitoringStatus;
+    if (currentMonitoringStatus) {
+      lockedMonitoringVMs.add(vmShortName);
+    } else {
+      lockedMonitoringVMs.delete(vmShortName);
+    }
+    updateCardUI(vmShortName, currentMonitoringStatus ? 'monitoring' : 'online');
+    button.disabled = false;
+    alert("Network error: " + err.message);
   });
 }
 
 function shutdownVM(vmShortName) {
   if (!confirm(`Are you sure you want to shut down ${vmShortName}?`)) return;
+
+  const button = document.getElementById(`shutdown-${vmShortName}`); 
+  const monitorButton = document.getElementById(`monitor-${vmShortName}`);
+  
+  if (button) {
+      button.disabled = true; 
+      button.innerText = 'Shutting Down...';
+  }
+  if (monitorButton) {
+      monitorButton.disabled = true;
+  }
+  
+  // Always remove from locked state when shutting down
+  lockedMonitoringVMs.delete(vmShortName);
 
   fetch("/shutdown-vm", {
     method: "POST",
@@ -217,15 +502,26 @@ function shutdownVM(vmShortName) {
   .then(data => {
     if (data.status === "shutdown") {
       alert(`${vmShortName} has been shut down`);
-      updateCardUI(vmShortName, 'offline'); // Update UI directly
+      // The status will update to 'offline' via SocketIO
     } else {
       alert(`Shutdown failed: ${data.message || 'Unknown error'}`);
+      if (button) button.disabled = false;
+      if (monitorButton) monitorButton.disabled = false;
+      // If it was monitoring before shutdown attempt, re-lock it
+      if (monitoringState[vmShortName]) {
+        lockedMonitoringVMs.add(vmShortName);
+      }
     }
-    checkVMStatus();
   })
   .catch(err => {
     console.error("Fetch error:", err);
     alert("Error contacting the server or network issue: " + err.message);
+    if (button) button.disabled = false;
+    if (monitorButton) monitorButton.disabled = false;
+    // Revert locked state if it was monitoring
+    if (monitoringState[vmShortName]) {
+      lockedMonitoringVMs.add(vmShortName);
+    }
   });
 }
 
@@ -233,9 +529,8 @@ function updateCardUI(vmShortName, currentStatus) {
   const card = document.getElementById(`vm-${vmShortName}`);
   const statusSpan = document.getElementById(`status-${vmShortName}`);
   const monitorButton = document.getElementById(`monitor-${vmShortName}`);
-  const ipSpan = document.getElementById(`ip-${vmShortName}`);
 
-  if (!card || !statusSpan || !monitorButton || !ipSpan) return;
+  if (!card || !statusSpan || !monitorButton) return;
 
   // Clear all status classes first
   card.classList.remove('vm-online', 'vm-offline', 'vm-monitoring');
@@ -245,45 +540,21 @@ function updateCardUI(vmShortName, currentStatus) {
     card.classList.add('vm-online');
     statusSpan.innerText = 'Online';
     monitorButton.innerText = 'Start Monitoring';
-    monitoringState[vmShortName] = false;
+    monitoringState[vmShortName] = false; // Ensure local state matches UI
     monitorButton.disabled = false;
   } else if (currentStatus === 'monitoring') {
-    card.classList.add('vm-monitoring'); // Correct class for monitoring state
+    card.classList.add('vm-monitoring');
     statusSpan.innerText = 'Monitoring';
-    monitorButton.innerText = 'Stop Monitoring'; // Correct button text
-    monitoringState[vmShortName] = true;
+    monitorButton.innerText = 'Stop Monitoring';
+    monitoringState[vmShortName] = true; // Ensure local state matches UI
     monitorButton.disabled = false;
   } else if (currentStatus === 'offline') {
     card.classList.add('vm-offline');
     statusSpan.innerText = 'Offline';
-    monitorButton.innerText = 'Offline'; // Button text for offline state
-    monitoringState[vmShortName] = false;
-    monitorButton.disabled = true; // Button disabled when offline
+    monitorButton.innerText = 'Offline';
+    monitoringState[vmShortName] = false; // Ensure local state matches UI
+    monitorButton.disabled = true;
   }
-  // Any other status (e.g., 'Error Fetching Status') will fall through,
-  // the button will remain as is or be disabled by checkVMStatus catch block.
-}
-
-function checkVMStatus() {
-  fetch('/active-vms')
-    .then(res => res.json())
-    .then(statuses => {
-      for (const vmShortName in statuses) {
-        if (statuses.hasOwnProperty(vmShortName)) {
-          updateCardUI(vmShortName, statuses[vmShortName]);
-        }
-      }
-    })
-    .catch(err => {
-      console.error("Failed to fetch VM status:", err);
-      {% if vms %}
-        {% for vm in vms %}
-        document.getElementById(`status-{{ vm.short_name }}`).innerText = "Error Fetching Status";
-        document.getElementById(`monitor-{{ vm.short_name }}`).disabled = true;
-        {% endfor %}
-      {% endif %}
-    });
 }
 </script>
-
 {% endblock %}

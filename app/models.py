@@ -13,18 +13,21 @@ class User(db.Model, UserMixin): # Inherit from UserMixin
         return f"User('{self.username}', '{self.email}')"
     
 
+# New VM Model (Ensure this matches or update accordingly)
 class VM(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    # A unique identifier for the VM (e.g., 'lubuntu-vm', 'kali-linux-vm')
-    # This will be used as the 'vm' parameter in your AJAX calls
-    short_name = db.Column(db.String(50), unique=True, nullable=False)
-    name = db.Column(db.String(100), nullable=False) # Display name like "Lubuntu VM"
-    ip_address = db.Column(db.String(15), nullable=False)
-    ssh_username = db.Column(db.String(50), nullable=False)
-    # Store SSH password securely (e.g., encrypted or via SSH keys).
-    # For this example, we'll keep it simple for now, but acknowledge the security risk.
-    ssh_password = db.Column(db.String(100), nullable=False) # Or path to SSH key
-    status = db.Column(db.String(20), default='offline', nullable=False) # 'online', 'offline', 'monitoring'
-    # Optional: link to a user if VMs are user-specific
-    # user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    # user = db.relationship('User', backref='vms')
+    name = db.Column(db.String(64), nullable=False) # e.g., "Lubuntu VM"
+    # MODIFIED: Removed unique=True constraint
+    short_name = db.Column(db.String(32), nullable=False) # e.g., "lubuntu", "kali"
+    ip_address = db.Column(db.String(15), nullable=False) # IPv4 format
+    ssh_username = db.Column(db.String(64), nullable=False)
+    # WARNING: Storing plain passwords is not secure for production!
+    # Consider using ssh_key_path and ssh_key_passphrase instead.
+    ssh_password = db.Column(db.String(128), nullable=True) # Optional if using keys
+    description = db.Column(db.String(256), nullable=True) # e.g., "My primary analysis VM"
+    status = db.Column(db.String(32), default='offline', nullable=False) # e.g., 'online', 'offline', 'monitoring'
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # Link to the user who owns it
+
+
+    def __repr__(self):
+        return f'<VM {self.name} ({self.ip_address})>'

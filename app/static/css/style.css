@@ -166,10 +166,6 @@ body, html {
   box-shadow: 0 5px 15px rgba(27, 92, 188, 0.3);
 }
 
-.btn.primary {
-  background-color: #1e88e5;
-  color: white;
-}
 
 .btn.primary:hover {
   background-color: #1565c0;

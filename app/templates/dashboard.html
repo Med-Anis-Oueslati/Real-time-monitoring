@@ -14,15 +14,16 @@
         </a>
     </div>
     <div class="card">
-      <h3>Conversational Agent</h3>
-      <p>Ask questions using natural language.</p>
-      <button id="go-streamlit" class="btn primary">Go</button>
-    </div>
-    <div class="card">
       <h3>VM Monitoring</h3>
       <p>Start monitoring on available virtual machines.</p>
       <a href="{{ url_for('main.vm_monitoring') }}" class="btn primary">Go</a>
     </div>
+    <div class="card">
+      <h3>Conversational Agent</h3>
+      <p>Ask questions using natural language.</p>
+      <button id="go-streamlit" class="btn primary">Go</button>
+    </div>
+
     {# NEW CARD FOR MITIGATION AGENT INTERACTION #}
     <div class="card">
       <h3>Mitigation Agent Interaction</h3>
@@ -33,6 +34,12 @@
       <h3>Anomaly Detection Agent</h3>
       <p>Run anomaly detection sweeps and review incidents.</p>
       <a href="{{ url_for('main.anomaly_detection') }}" class="btn primary">Go</a>
+    </div>
+    {# NEW CARD FOR ATTACK SIMULATION #}
+    <div class="card">
+      <h3>Attack Simulation Agent</h3>
+      <p>Generate and execute cyber attack simulations.</p>
+      <a href="{{ url_for('main.attack_simulation') }}" class="btn primary">Go</a>
     </div>
   </div>
 </div>
@@ -103,4 +110,5 @@
     cursor: pointer;
   }
 </style>
+
 {% endblock %}

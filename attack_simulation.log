@@ -1,0 +1,170 @@
+2025-05-30 00:22:39,896 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-05-30 00:22:39,896 - INFO - [33mPress CTRL+C to quit[0m
+2025-05-30 00:22:39,897 - INFO -  * Restarting with watchdog (inotify)
+2025-05-30 00:22:41,647 - WARNING -  * Debugger is active!
+2025-05-30 00:22:41,649 - INFO -  * Debugger PIN: 128-160-454
+2025-05-30 00:22:47,331 - INFO - 127.0.0.1 - - [30/May/2025 00:22:47] "GET /dashboard HTTP/1.1" 200 -
+2025-05-30 00:22:47,358 - INFO - 127.0.0.1 - - [30/May/2025 00:22:47] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-05-30 00:22:47,360 - INFO - 127.0.0.1 - - [30/May/2025 00:22:47] "[36mGET /static/images/logo.png HTTP/1.1[0m" 304 -
+2025-05-30 00:22:48,969 - INFO - 127.0.0.1 - - [30/May/2025 00:22:48] "GET /vm-monitoring HTTP/1.1" 200 -
+2025-05-30 00:22:49,005 - INFO - 127.0.0.1 - - [30/May/2025 00:22:49] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-05-30 00:22:49,008 - INFO - 127.0.0.1 - - [30/May/2025 00:22:49] "[36mGET /static/images/logo.png HTTP/1.1[0m" 304 -
+2025-05-30 00:22:49,018 - INFO - 127.0.0.1 - - [30/May/2025 00:22:49] "GET /socket.io/?EIO=4&transport=polling&t=PSUMlqv HTTP/1.1" 200 -
+2025-05-30 00:22:49,032 - INFO - RabbitMQ anomaly consumer thread started.
+2025-05-30 00:22:49,039 - INFO - 127.0.0.1 - - [30/May/2025 00:22:49] "POST /socket.io/?EIO=4&transport=polling&t=PSUMlr0&sid=38VEZ2eq_OcvnhcKAAAA HTTP/1.1" 200 -
+2025-05-30 00:22:49,040 - INFO - 127.0.0.1 - - [30/May/2025 00:22:49] "GET /socket.io/?EIO=4&transport=polling&t=PSUMlr1&sid=38VEZ2eq_OcvnhcKAAAA HTTP/1.1" 200 -
+2025-05-30 00:22:49,041 - INFO - Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+2025-05-30 00:22:49,046 - INFO - Socket connected: <socket.socket fd=31, family=2, type=1, proto=6, laddr=('127.0.0.1', 35952), raddr=('127.0.0.1', 5672)>
+2025-05-30 00:22:49,147 - INFO - Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7aa7c5e31370>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7aa7c5e31370> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+2025-05-30 00:22:49,148 - INFO - 127.0.0.1 - - [30/May/2025 00:22:49] "GET /socket.io/?EIO=4&transport=polling&t=PSUMlrM&sid=38VEZ2eq_OcvnhcKAAAA HTTP/1.1" 200 -
+2025-05-30 00:22:49,151 - INFO - AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7aa7c5e31370> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+2025-05-30 00:22:49,151 - INFO - AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7aa7c5e31370> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+2025-05-30 00:22:49,151 - INFO - Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7aa7c5e31370> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+2025-05-30 00:22:49,152 - INFO - Created channel=1
+2025-05-30 00:22:49,152 - INFO - RabbitMQ consumer started. Waiting for messages...
+2025-05-30 00:22:50,530 - INFO - 127.0.0.1 - - [30/May/2025 00:22:50] "GET /socket.io/?EIO=4&transport=websocket&sid=38VEZ2eq_OcvnhcKAAAA HTTP/1.1" 200 -
+2025-05-30 00:24:51,039 - INFO -  * Detected change in '/home/anis/PFE/.venv/lib/python3.12/site-packages/flask/app.py', reloading
+2025-05-30 00:24:51,040 - INFO -  * Detected change in '/home/anis/PFE/.venv/lib/python3.12/site-packages/flask_socketio/__init__.py', reloading
+2025-05-30 00:24:51,040 - INFO -  * Detected change in '/home/anis/PFE/.venv/lib/python3.12/site-packages/engineio/middleware.py', reloading
+2025-05-30 00:24:51,041 - INFO -  * Detected change in '/home/anis/PFE/.venv/lib/python3.12/site-packages/flask_login/utils.py', reloading
+2025-05-30 00:24:51,041 - INFO -  * Detected change in '/home/anis/PFE/app/routes.py', reloading
+2025-05-30 00:24:51,042 - INFO -  * Detected change in '/home/anis/PFE/.venv/lib/python3.12/site-packages/flask/templating.py', reloading
+2025-05-30 00:24:51,042 - INFO -  * Detected change in '/home/anis/PFE/.venv/lib/python3.12/site-packages/jinja2/environment.py', reloading
+2025-05-30 00:24:51,043 - INFO -  * Detected change in '/home/anis/PFE/.venv/lib/python3.12/site-packages/jinja2/loaders.py', reloading
+2025-05-30 00:24:51,046 - INFO - 127.0.0.1 - - [30/May/2025 00:24:51] "[35m[1mGET /dashboard HTTP/1.1[0m" 500 -
+2025-05-30 00:24:51,072 - INFO - 127.0.0.1 - - [30/May/2025 00:24:51] "[36mGET /dashboard?__debugger__=yes&cmd=resource&f=style.css HTTP/1.1[0m" 304 -
+2025-05-30 00:24:51,073 - INFO - 127.0.0.1 - - [30/May/2025 00:24:51] "[36mGET /dashboard?__debugger__=yes&cmd=resource&f=debugger.js HTTP/1.1[0m" 304 -
+2025-05-30 00:24:51,089 - INFO - 127.0.0.1 - - [30/May/2025 00:24:51] "[36mGET /dashboard?__debugger__=yes&cmd=resource&f=console.png HTTP/1.1[0m" 304 -
+2025-05-30 00:24:51,959 - INFO -  * Restarting with watchdog (inotify)
+2025-05-30 00:24:53,866 - WARNING -  * Debugger is active!
+2025-05-30 00:24:53,868 - INFO -  * Debugger PIN: 128-160-454
+2025-05-30 00:25:08,870 - INFO - 127.0.0.1 - - [30/May/2025 00:25:08] "GET /dashboard HTTP/1.1" 200 -
+2025-05-30 00:25:08,902 - INFO - 127.0.0.1 - - [30/May/2025 00:25:08] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-05-30 00:25:08,904 - INFO - 127.0.0.1 - - [30/May/2025 00:25:08] "[36mGET /static/images/logo.png HTTP/1.1[0m" 304 -
+2025-05-30 00:25:11,964 - INFO - 127.0.0.1 - - [30/May/2025 00:25:11] "GET /attack-simulation HTTP/1.1" 200 -
+2025-05-30 00:25:12,000 - INFO - 127.0.0.1 - - [30/May/2025 00:25:12] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-05-30 00:25:12,001 - INFO - 127.0.0.1 - - [30/May/2025 00:25:12] "[36mGET /static/images/logo.png HTTP/1.1[0m" 304 -
+2025-05-30 00:25:12,021 - INFO - 127.0.0.1 - - [30/May/2025 00:25:12] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-05-30 00:25:12,023 - INFO - 127.0.0.1 - - [30/May/2025 00:25:12] "GET /socket.io/?EIO=4&transport=polling&t=PSUNIlL HTTP/1.1" 200 -
+2025-05-30 00:25:12,039 - INFO - RabbitMQ anomaly consumer thread started.
+2025-05-30 00:25:12,046 - INFO - 127.0.0.1 - - [30/May/2025 00:25:12] "GET /socket.io/?EIO=4&transport=polling&t=PSUNIlR.0&sid=M3kLV1HFGrFqUDoAAAAA HTTP/1.1" 200 -
+2025-05-30 00:25:12,049 - INFO - Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+2025-05-30 00:25:12,050 - INFO - 127.0.0.1 - - [30/May/2025 00:25:12] "POST /socket.io/?EIO=4&transport=polling&t=PSUNIlR&sid=M3kLV1HFGrFqUDoAAAAA HTTP/1.1" 200 -
+2025-05-30 00:25:12,053 - INFO - Socket connected: <socket.socket fd=42, family=2, type=1, proto=6, laddr=('127.0.0.1', 41732), raddr=('127.0.0.1', 5672)>
+2025-05-30 00:25:12,054 - INFO - Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7ec468428ad0>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7ec468428ad0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+2025-05-30 00:25:12,056 - INFO - AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7ec468428ad0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+2025-05-30 00:25:12,056 - INFO - AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7ec468428ad0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+2025-05-30 00:25:12,057 - INFO - Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7ec468428ad0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+2025-05-30 00:25:12,057 - INFO - Created channel=1
+2025-05-30 00:25:12,058 - INFO - RabbitMQ consumer started. Waiting for messages...
+2025-05-30 00:25:31,617 - INFO -  * Detected change in '/usr/lib/python3.12/threading.py', reloading
+2025-05-30 00:25:31,618 - INFO -  * Detected change in '/usr/lib/python3.12/threading.py', reloading
+2025-05-30 00:25:31,626 - INFO -  * Detected change in '/home/anis/PFE/.venv/lib/python3.12/site-packages/socketio/server.py', reloading
+2025-05-30 00:25:31,627 - INFO -  * Detected change in '/home/anis/PFE/.venv/lib/python3.12/site-packages/socketio/server.py', reloading
+2025-05-30 00:25:31,628 - INFO -  * Detected change in '/home/anis/PFE/.venv/lib/python3.12/site-packages/flask_socketio/__init__.py', reloading
+2025-05-30 00:25:31,629 - INFO -  * Detected change in '/home/anis/PFE/.venv/lib/python3.12/site-packages/flask_socketio/__init__.py', reloading
+2025-05-30 00:25:31,630 - INFO -  * Detected change in '/home/anis/PFE/.venv/lib/python3.12/site-packages/flask_login/utils.py', reloading
+2025-05-30 00:25:31,630 - INFO -  * Detected change in '/home/anis/PFE/app/routes.py', reloading
+2025-05-30 00:25:33,042 - INFO -  * Restarting with watchdog (inotify)
+2025-05-30 00:25:34,854 - WARNING -  * Debugger is active!
+2025-05-30 00:25:34,856 - INFO -  * Debugger PIN: 128-160-454
+2025-05-30 00:25:34,975 - INFO - 127.0.0.1 - - [30/May/2025 00:25:34] "GET /socket.io/?EIO=4&transport=polling&t=PSUNO22 HTTP/1.1" 200 -
+2025-05-30 00:25:35,005 - INFO - RabbitMQ anomaly consumer thread started.
+2025-05-30 00:25:35,009 - INFO - 127.0.0.1 - - [30/May/2025 00:25:35] "GET /socket.io/?EIO=4&transport=polling&t=PSUNOMC.0&sid=H0twZhm9RcVgEA9tAAAA HTTP/1.1" 200 -
+2025-05-30 00:25:35,012 - INFO - Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+2025-05-30 00:25:35,013 - INFO - Socket connected: <socket.socket fd=43, family=2, type=1, proto=6, laddr=('127.0.0.1', 51190), raddr=('127.0.0.1', 5672)>
+2025-05-30 00:25:35,014 - INFO - Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7ef4303e4f20>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7ef4303e4f20> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+2025-05-30 00:25:35,015 - INFO - 127.0.0.1 - - [30/May/2025 00:25:35] "POST /socket.io/?EIO=4&transport=polling&t=PSUNOMC&sid=H0twZhm9RcVgEA9tAAAA HTTP/1.1" 200 -
+2025-05-30 00:25:35,017 - INFO - AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7ef4303e4f20> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+2025-05-30 00:25:35,017 - INFO - AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7ef4303e4f20> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+2025-05-30 00:25:35,017 - INFO - Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7ef4303e4f20> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+2025-05-30 00:25:35,017 - INFO - Created channel=1
+2025-05-30 00:25:35,018 - INFO - RabbitMQ consumer started. Waiting for messages...
+2025-05-30 00:26:25,627 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-05-30 00:26:25,627 - INFO - [33mPress CTRL+C to quit[0m
+2025-05-30 00:26:25,627 - INFO -  * Restarting with watchdog (inotify)
+2025-05-30 00:26:27,488 - WARNING -  * Debugger is active!
+2025-05-30 00:26:27,490 - INFO -  * Debugger PIN: 128-160-454
+2025-05-30 00:26:27,897 - INFO - 127.0.0.1 - - [30/May/2025 00:26:27] "GET /socket.io/?EIO=4&transport=polling&t=PSUNbGu HTTP/1.1" 200 -
+2025-05-30 00:26:27,902 - INFO - RabbitMQ anomaly consumer thread started.
+2025-05-30 00:26:27,909 - INFO - 127.0.0.1 - - [30/May/2025 00:26:27] "POST /socket.io/?EIO=4&transport=polling&t=PSUNbGw&sid=7MuqiZkDOtrzVsx1AAAA HTTP/1.1" 200 -
+2025-05-30 00:26:27,910 - INFO - Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+2025-05-30 00:26:27,910 - INFO - 127.0.0.1 - - [30/May/2025 00:26:27] "GET /socket.io/?EIO=4&transport=polling&t=PSUNbGx&sid=7MuqiZkDOtrzVsx1AAAA HTTP/1.1" 200 -
+2025-05-30 00:26:27,911 - INFO - Socket connected: <socket.socket fd=34, family=2, type=1, proto=6, laddr=('127.0.0.1', 38618), raddr=('127.0.0.1', 5672)>
+2025-05-30 00:26:27,912 - INFO - Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x769dc14d09e0>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x769dc14d09e0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+2025-05-30 00:26:27,914 - INFO - AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x769dc14d09e0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+2025-05-30 00:26:27,915 - INFO - AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x769dc14d09e0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+2025-05-30 00:26:27,915 - INFO - Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x769dc14d09e0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+2025-05-30 00:26:27,915 - INFO - Created channel=1
+2025-05-30 00:26:27,916 - INFO - RabbitMQ consumer started. Waiting for messages...
+2025-05-30 00:26:35,724 - INFO - 127.0.0.1 - - [30/May/2025 00:26:35] "GET /socket.io/?EIO=4&transport=websocket&sid=7MuqiZkDOtrzVsx1AAAA HTTP/1.1" 200 -
+2025-05-30 00:26:35,747 - INFO - 127.0.0.1 - - [30/May/2025 00:26:35] "GET /attack-simulation HTTP/1.1" 200 -
+2025-05-30 00:26:35,851 - INFO - 127.0.0.1 - - [30/May/2025 00:26:35] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+2025-05-30 00:26:35,853 - INFO - 127.0.0.1 - - [30/May/2025 00:26:35] "[36mGET /static/images/logo.png HTTP/1.1[0m" 304 -
+2025-05-30 00:26:35,859 - INFO - 127.0.0.1 - - [30/May/2025 00:26:35] "GET /socket.io/?EIO=4&transport=polling&t=PSUNdDI HTTP/1.1" 200 -
+2025-05-30 00:26:35,878 - INFO - 127.0.0.1 - - [30/May/2025 00:26:35] "POST /socket.io/?EIO=4&transport=polling&t=PSUNdDN&sid=6mowNIC8gIM2M_TbAAAC HTTP/1.1" 200 -
+2025-05-30 00:26:35,878 - INFO - 127.0.0.1 - - [30/May/2025 00:26:35] "GET /socket.io/?EIO=4&transport=polling&t=PSUNdDN.0&sid=6mowNIC8gIM2M_TbAAAC HTTP/1.1" 200 -
+2025-05-30 00:26:35,883 - INFO - 127.0.0.1 - - [30/May/2025 00:26:35] "GET /socket.io/?EIO=4&transport=polling&t=PSUNdDg&sid=6mowNIC8gIM2M_TbAAAC HTTP/1.1" 200 -
+2025-05-30 00:26:35,887 - INFO - 127.0.0.1 - - [30/May/2025 00:26:35] "GET /socket.io/?EIO=4&transport=polling&t=PSUNdDj&sid=6mowNIC8gIM2M_TbAAAC HTTP/1.1" 200 -
+2025-05-30 00:26:37,461 - INFO -  * Detected change in '/usr/lib/python3.12/threading.py', reloading
+2025-05-30 00:26:37,461 - INFO -  * Detected change in '/usr/lib/python3.12/threading.py', reloading
+2025-05-30 00:26:37,461 - INFO -  * Detected change in '/home/anis/PFE/.venv/lib/python3.12/site-packages/socketio/server.py', reloading
+2025-05-30 00:26:37,462 - INFO -  * Detected change in '/home/anis/PFE/.venv/lib/python3.12/site-packages/socketio/server.py', reloading
+2025-05-30 00:26:37,462 - INFO -  * Detected change in '/home/anis/PFE/.venv/lib/python3.12/site-packages/flask_socketio/__init__.py', reloading
+2025-05-30 00:26:37,463 - INFO -  * Detected change in '/home/anis/PFE/.venv/lib/python3.12/site-packages/flask_socketio/__init__.py', reloading
+2025-05-30 00:26:37,463 - INFO -  * Detected change in '/home/anis/PFE/.venv/lib/python3.12/site-packages/flask_login/utils.py', reloading
+2025-05-30 00:26:37,464 - INFO -  * Detected change in '/home/anis/PFE/app/routes.py', reloading
+2025-05-30 00:26:38,435 - INFO -  * Restarting with watchdog (inotify)
+2025-05-30 00:26:40,337 - WARNING -  * Debugger is active!
+2025-05-30 00:26:40,338 - INFO -  * Debugger PIN: 128-160-454
+2025-05-30 00:26:40,476 - INFO - 127.0.0.1 - - [30/May/2025 00:26:40] "GET /socket.io/?EIO=4&transport=polling&t=PSUNd-w HTTP/1.1" 200 -
+2025-05-30 00:26:40,506 - INFO - RabbitMQ anomaly consumer thread started.
+2025-05-30 00:26:40,513 - INFO - 127.0.0.1 - - [30/May/2025 00:26:40] "GET /socket.io/?EIO=4&transport=polling&t=PSUNeLk.0&sid=NqMzOR5JTj_LDl-rAAAA HTTP/1.1" 200 -
+2025-05-30 00:26:40,515 - INFO - Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+2025-05-30 00:26:40,516 - INFO - Socket connected: <socket.socket fd=36, family=2, type=1, proto=6, laddr=('127.0.0.1', 49090), raddr=('127.0.0.1', 5672)>
+2025-05-30 00:26:40,517 - INFO - Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7993ec2c7ef0>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7993ec2c7ef0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+2025-05-30 00:26:40,518 - INFO - 127.0.0.1 - - [30/May/2025 00:26:40] "POST /socket.io/?EIO=4&transport=polling&t=PSUNeLk&sid=NqMzOR5JTj_LDl-rAAAA HTTP/1.1" 200 -
+2025-05-30 00:26:40,519 - INFO - AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7993ec2c7ef0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+2025-05-30 00:26:40,520 - INFO - AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7993ec2c7ef0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+2025-05-30 00:26:40,520 - INFO - Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7993ec2c7ef0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+2025-05-30 00:26:40,520 - INFO - Created channel=1
+2025-05-30 00:26:40,521 - INFO - RabbitMQ consumer started. Waiting for messages...
+2025-05-30 00:26:46,364 - INFO -  * Detected change in '/home/anis/PFE/.venv/lib/python3.12/site-packages/paramiko/client.py', reloading
+2025-05-30 00:26:46,373 - INFO -  * Detected change in '/home/anis/PFE/.venv/lib/python3.12/site-packages/paramiko/client.py', reloading
+2025-05-30 00:26:46,380 - INFO -  * Detected change in '/home/anis/PFE/.venv/lib/python3.12/site-packages/paramiko/client.py', reloading
+2025-05-30 00:26:46,381 - INFO -  * Detected change in '/home/anis/PFE/.venv/lib/python3.12/site-packages/paramiko/client.py', reloading
+2025-05-30 00:26:47,174 - INFO -  * Restarting with watchdog (inotify)
+2025-05-30 00:26:49,242 - WARNING -  * Debugger is active!
+2025-05-30 00:26:49,243 - INFO -  * Debugger PIN: 128-160-454
+2025-05-30 00:26:49,425 - INFO - 127.0.0.1 - - [30/May/2025 00:26:49] "GET /socket.io/?EIO=4&transport=polling&t=PSUNgLH HTTP/1.1" 200 -
+2025-05-30 00:26:49,430 - INFO - RabbitMQ anomaly consumer thread started.
+2025-05-30 00:26:49,436 - INFO - 127.0.0.1 - - [30/May/2025 00:26:49] "POST /socket.io/?EIO=4&transport=polling&t=PSUNgXJ&sid=_MkJ1hXMZdQW8enUAAAA HTTP/1.1" 200 -
+2025-05-30 00:26:49,436 - INFO - 127.0.0.1 - - [30/May/2025 00:26:49] "GET /socket.io/?EIO=4&transport=polling&t=PSUNgXK&sid=_MkJ1hXMZdQW8enUAAAA HTTP/1.1" 200 -
+2025-05-30 00:26:49,438 - INFO - Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+2025-05-30 00:26:49,440 - INFO - Socket connected: <socket.socket fd=26, family=2, type=1, proto=6, laddr=('127.0.0.1', 45416), raddr=('127.0.0.1', 5672)>
+2025-05-30 00:26:49,442 - INFO - Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7b3084234920>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7b3084234920> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+2025-05-30 00:26:49,443 - INFO - AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7b3084234920> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+2025-05-30 00:26:49,444 - INFO - AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7b3084234920> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+2025-05-30 00:26:49,444 - INFO - Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7b3084234920> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+2025-05-30 00:26:49,444 - INFO - Created channel=1
+2025-05-30 00:26:49,449 - INFO - RabbitMQ consumer started. Waiting for messages...
+2025-05-30 00:27:56,985 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-05-30 00:27:56,985 - INFO - [33mPress CTRL+C to quit[0m
+2025-05-30 00:27:56,985 - INFO -  * Restarting with watchdog (inotify)
+2025-05-30 00:27:58,705 - WARNING -  * Debugger is active!
+2025-05-30 00:27:58,707 - INFO -  * Debugger PIN: 128-160-454
+2025-05-30 00:28:02,839 - INFO - 127.0.0.1 - - [30/May/2025 00:28:02] "GET /socket.io/?EIO=4&transport=polling&t=PSUNySK HTTP/1.1" 200 -
+2025-05-30 00:28:02,845 - INFO - RabbitMQ anomaly consumer thread started.
+2025-05-30 00:28:02,852 - INFO - Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+2025-05-30 00:28:02,853 - INFO - 127.0.0.1 - - [30/May/2025 00:28:02] "GET /socket.io/?EIO=4&transport=polling&t=PSUNySQ&sid=Htw6hbkdZKhAYp4FAAAA HTTP/1.1" 200 -
+2025-05-30 00:28:02,853 - INFO - Socket connected: <socket.socket fd=27, family=2, type=1, proto=6, laddr=('127.0.0.1', 40564), raddr=('127.0.0.1', 5672)>
+2025-05-30 00:28:02,853 - INFO - 127.0.0.1 - - [30/May/2025 00:28:02] "POST /socket.io/?EIO=4&transport=polling&t=PSUNySP&sid=Htw6hbkdZKhAYp4FAAAA HTTP/1.1" 200 -
+2025-05-30 00:28:02,855 - INFO - Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7c8b243f7680>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7c8b243f7680> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+2025-05-30 00:28:02,857 - INFO - AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7c8b243f7680> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+2025-05-30 00:28:02,857 - INFO - AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7c8b243f7680> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+2025-05-30 00:28:02,857 - INFO - Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7c8b243f7680> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+2025-05-30 00:28:02,857 - INFO - Created channel=1
+2025-05-30 00:28:02,858 - INFO - RabbitMQ consumer started. Waiting for messages...

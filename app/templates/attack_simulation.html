@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block title %}Attack Simulation{% endblock %}
+
+{% block content %}
+<div class="container" style="margin-top: 3rem; text-align: center;">
+    <h2 style="margin-bottom: 2rem; color: #e1e8ff;">Cyber Attack Simulation Agent</h2>
+
+    <div class="form-container" style="max-width: 800px; padding: 2rem;">
+        <h3 style="margin-bottom: 1.5rem; color: #bbdefb;">Generate Attack Commands</h3>
+        
+        <div class="form-group" style="margin-bottom: 1.5rem; position: relative;">
+            <input type="text" id="targetIpInput" class="form-control" required style="width: 100%; padding: 12px 15px; border-radius: 8px; border: 1px solid #3b445a; background-color: #2a303c; color: #e3f2fd;">
+            <label for="targetIpInput" class="input-label" style="position: absolute; left: 15px; top: 12px; color: #cfd8dc; pointer-events: none; transition: all 0.2s ease; background-color: transparent; padding: 0;">Target IP Address</label>
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 1.5rem; position: relative;">
+            <textarea id="attackScenarioInput" class="form-control" rows="3" required style="width: 100%; padding: 12px 15px; border-radius: 8px; border: 1px solid #3b445a; background-color: #2a303c; color: #e3f2fd; resize: vertical;"></textarea>
+            <label for="attackScenarioInput" class="input-label" style="position: absolute; left: 15px; top: 12px; color: #cfd8dc; pointer-events: none; transition: all 0.2s ease; background-color: transparent; padding: 0;">Attack Scenario (e.g., "port scan", "exploit vulnerability")</label>
+        </div>
+
+        <button id="generateCommandsBtn" class="btn primary" style="width: auto; padding: 12px 30px; font-size: 1rem; margin-bottom: 1rem;">Generate Commands</button>
+        
+        <div id="commandGenerationStatus" class="flashes" style="margin-top: 1rem; display: none;"></div>
+
+        <h3 style="margin-top: 3rem; margin-bottom: 1.5rem; color: #bbdefb;">Generated Bash Commands</h3>
+        <div id="generatedCommandsOutput" style="text-align: left; background-color: #1e2533; border: 1px solid #3b445a; border-radius: 8px; padding: 1.5rem; min-height: 100px; color: #a5d6a7; font-family: monospace; white-space: pre-wrap; word-break: break-all;">
+            No commands generated yet.
+        </div>
+        
+        <button id="executeAttackBtn" class="btn secondary" style="width: auto; padding: 12px 30px; font-size: 1rem; margin-top: 1.5rem; display: none;">Execute Attack</button>
+
+        <h3 style="margin-top: 3rem; margin-bottom: 1.5rem; color: #bbdefb;">Attack Execution Result</h3>
+        <div id="executionResultOutput" style="text-align: left; background-color: #1e2533; border: 1px solid #3b445a; border-radius: 8px; padding: 1.5rem; min-height: 100px; color: #e3f2fd; font-family: monospace; white-space: pre-wrap; word-break: break-all;">
+            No execution results yet.
+        </div>
+        <div id="executionStatus" class="flashes" style="margin-top: 1rem; display: none;"></div>
+
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const socket = io();
+
+        const targetIpInput = document.getElementById('targetIpInput');
+        const attackScenarioInput = document.getElementById('attackScenarioInput');
+        const generateCommandsBtn = document.getElementById('generateCommandsBtn');
+        const commandGenerationStatusDiv = document.getElementById('commandGenerationStatus');
+        const generatedCommandsOutput = document.getElementById('generatedCommandsOutput');
+        const executeAttackBtn = document.getElementById('executeAttackBtn');
+        const executionResultOutput = document.getElementById('executionResultOutput');
+        const executionStatusDiv = document.getElementById('executionStatus');
+
+        let currentGeneratedCommands = '';
+        let currentTargetIp = '';
+        let currentAttackScenario = '';
+
+        // --- Helper for Floating Labels ---
+        function setupFloatingLabel(inputElement) {
+            const labelElement = inputElement.nextElementSibling; // Assumes label is next sibling
+            
+            function updateLabel() {
+                if (inputElement.value.trim() !== '') {
+                    labelElement.style.top = '-18px';
+                    labelElement.style.left = '10px';
+                    labelElement.style.fontSize = '0.85rem';
+                    labelElement.style.color = '#bbdefb';
+                    labelElement.style.fontWeight = '600';
+                    labelElement.style.background = 'rgba(13, 71, 161, 0.8)';
+                    labelElement.style.padding = '0 6px';
+                    labelElement.style.borderRadius = '6px';
+                } else {
+                    labelElement.style.top = '12px';
+                    labelElement.style.left = '15px';
+                    labelElement.style.fontSize = '1rem';
+                    labelElement.style.color = '#cfd8dc';
+                    labelElement.style.fontWeight = '400';
+                    labelElement.style.background = 'transparent';
+                    labelElement.style.padding = '0';
+                    labelElement.style.borderRadius = '0';
+                }
+            }
+
+            inputElement.addEventListener('focus', updateLabel);
+            inputElement.addEventListener('blur', updateLabel);
+            // Initial check in case field is pre-filled (e.g., browser autofill)
+            updateLabel(); 
+        }
+
+        setupFloatingLabel(targetIpInput);
+        setupFloatingLabel(attackScenarioInput);
+
+
+        // Function to display status messages
+        function displayStatus(element, message, type) {
+            element.textContent = message;
+            element.className = `flashes ${type}`;
+            element.style.display = 'block';
+            element.classList.add('fadeIn');
+            setTimeout(() => {
+                element.style.display = 'none';
+                element.classList.remove('fadeIn');
+            }, 5000);
+        }
+
+        // --- Event Listeners ---
+
+        generateCommandsBtn.addEventListener('click', function() {
+            const targetIp = targetIpInput.value.trim();
+            const attackScenario = attackScenarioInput.value.trim();
+
+            if (!targetIp || !attackScenario) {
+                displayStatus(commandGenerationStatusDiv, 'Please enter both Target IP and Attack Scenario.', 'error');
+                return;
+            }
+
+            currentTargetIp = targetIp;
+            currentAttackScenario = attackScenario;
+
+            displayStatus(commandGenerationStatusDiv, 'Generating commands...', 'info');
+            generateCommandsBtn.disabled = true;
+            executeAttackBtn.style.display = 'none'; // Hide execute button until commands are ready
+            generatedCommandsOutput.textContent = 'Generating commands...';
+            executionResultOutput.textContent = 'No execution results yet.'; // Clear previous results
+
+            socket.emit('generate_attack_commands', { target_ip: targetIp, attack_scenario: attackScenario });
+        });
+
+        executeAttackBtn.addEventListener('click', function() {
+            if (currentGeneratedCommands) {
+                displayStatus(executionStatusDiv, 'Executing attack script...', 'info');
+                executeAttackBtn.disabled = true;
+                executionResultOutput.textContent = 'Executing attack script on Kali VM...';
+                socket.emit('execute_attack_script', {
+                    script_content: currentGeneratedCommands,
+                    target_ip: currentTargetIp,
+                    attack_scenario: currentAttackScenario
+                });
+            } else {
+                displayStatus(executionStatusDiv, 'No commands to execute.', 'error');
+            }
+        });
+
+        // --- Socket.IO Handlers ---
+
+        socket.on('attack_commands_response', function(data) {
+            generateCommandsBtn.disabled = false;
+            displayStatus(commandGenerationStatusDiv, data.message || (data.status === 'success' ? 'Commands generated successfully!' : 'Failed to generate commands.'), data.status);
+            
+            if (data.status === 'success') {
+                generatedCommandsOutput.textContent = data.commands;
+                currentGeneratedCommands = data.commands;
+                executeAttackBtn.style.display = 'block'; // Show execute button
+                executeAttackBtn.disabled = false; // Enable execute button
+            } else {
+                generatedCommandsOutput.textContent = data.message || 'Error generating commands.';
+                currentGeneratedCommands = '';
+                executeAttackBtn.style.display = 'none'; // Keep execute button hidden
+            }
+        });
+
+        socket.on('attack_execution_response', function(data) {
+            executeAttackBtn.disabled = false;
+            displayStatus(executionStatusDiv, data.message, data.status);
+            executionResultOutput.textContent = data.message; // Update with the actual result/status
+        });
+    });
+</script>
+
+<style>
+    /* General styles for form-group and input-label */
+    .form-group {
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 12px 15px;
+        border-radius: 8px;
+        border: 1px solid #3b445a;
+        background-color: #2a303c;
+        color: #e3f2fd;
+        font-size: 1rem;
+        box-sizing: border-box; /* Include padding and border in the element's total width and height */
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #2196f3;
+        box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.5);
+    }
+
+    .input-label {
+        position: absolute;
+        left: 15px;
+        top: 12px;
+        color: #cfd8dc;
+        pointer-events: none;
+        transition: all 0.2s ease;
+        background-color: transparent;
+        padding: 0;
+        font-size: 1rem;
+        font-weight: 400;
+        border-radius: 0;
+    }
+
+    /* Styles for status flashes */
+    .flashes {
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        font-size: 0.95rem;
+        text-align: center;
+        opacity: 0; /* Start hidden for fade-in */
+        transition: opacity 0.5s ease-in-out;
+    }
+
+    .flashes.success {
+        background-color: #4CAF50a8; /* Green */
+        color: #e8f5e9;
+        box-shadow: 0 0 12px #4CAF50a8;
+    }
+
+    .flashes.error {
+        background-color: #f44336a8; /* Red */
+        color: #ffebee;
+        box-shadow: 0 0 12px #f44336a8;
+    }
+
+    .flashes.info {
+        background-color: #2196f3a8; /* Blue */
+        color: #e3f2fd;
+        box-shadow: 0 0 12px #2196f3a8;
+    }
+
+    .flashes.fadeIn {
+        opacity: 1;
+    }
+
+    /* General container and card styles (copied from dashboard.html for consistency) */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+
+    .dashboard-card {
+        background: rgba(255, 255, 255, 0.08);
+        padding: 2rem;
+        border-radius: 12px;
+        text-decoration: none;
+        color: #e3f2fd;
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: flex-start;
+        text-align: left;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .dashboard-card h3 {
+        margin-bottom: 0.5rem;
+        font-size: 1.5rem;
+    }
+
+    .dashboard-card p {
+        font-size: 1rem;
+        line-height: 1.5;
+        color: #cfd8dc;
+    }
+
+    /* Button styles (copied from base.html/dashboard.html for consistency) */
+    .btn {
+        display: inline-block;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: bold;
+        transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+        cursor: pointer;
+        border: none;
+        font-size: 1rem;
+    }
+
+    .btn.primary {
+        background-color: #2196f3; /* Blue */
+        color: white;
+    }
+
+    .btn.primary:hover {
+        background-color: #1976d2; /* Darker blue */
+    }
+
+    .btn.secondary {
+        background-color: #607d8b; /* Grey-blue */
+        color: white;
+    }
+
+    .btn.secondary:hover {
+        background-color: #455a64; /* Darker grey-blue */
+    }
+
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+</style>
+{% endblock %}

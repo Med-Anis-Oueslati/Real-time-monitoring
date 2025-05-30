@@ -8,6 +8,8 @@ import os
 
 # NEW: Import MitigationUtility
 from .mitigation_utils import MitigationUtility
+# NEW: Import AttackAgent
+from agents.cyber_attack import AttackAgent
 
 db = SQLAlchemy()
 csrf = CSRFProtect()
@@ -34,9 +36,9 @@ def create_app():
         # from the user ID stored in the session.
         return User.query.get(int(user_id))
 
-    # NEW: Initialize MitigationUtility and attach it to the app object
+    # Initialize MitigationUtility and attach it to the app object
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
+    
     if not OPENAI_API_KEY:
         print("WARNING: OPENAI_API_KEY environment variable not set. Mitigation agent functionality may be limited.")
         app.mitigation_utility = None
@@ -47,6 +49,30 @@ def create_app():
         except Exception as e:
             print(f"Error initializing MitigationUtility: {e}")
             app.mitigation_utility = None
+
+    # NEW: Initialize AttackAgent and attach it to the app object
+    KALI_VM_IP = os.getenv("KALI_VM_IP")
+    KALI_VM_USER = os.getenv("KALI_VM_USER")
+    KALI_VM_PASSWORD = os.getenv("KALI_VM_PASSWORD")
+    KALI_SCRIPT_DIR = os.getenv("KALI_SCRIPT_DIR", "/home/kali/scripts") # Default if not set
+
+    if not all([OPENAI_API_KEY, KALI_VM_IP, KALI_VM_USER, KALI_VM_PASSWORD]):
+        print("WARNING: Missing environment variables for AttackAgent (OPENAI_API_KEY, KALI_VM_IP, KALI_VM_USER, KALI_VM_PASSWORD). Attack simulation functionality may be limited.")
+        app.attack_agent = None
+    else:
+        try:
+            app.attack_agent = AttackAgent(
+                openai_api_key=OPENAI_API_KEY,
+                kali_vm_ip=KALI_VM_IP,
+                kali_vm_user=KALI_VM_USER,
+                kali_vm_password=KALI_VM_PASSWORD,
+                script_dir=KALI_SCRIPT_DIR
+            )
+            print("AttackAgent initialized successfully and attached to app.")
+        except Exception as e:
+            print(f"Error initializing AttackAgent: {e}")
+            app.attack_agent = None
+
 
     from .routes import main
     app.register_blueprint(main)

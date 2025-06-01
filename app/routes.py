@@ -541,28 +541,41 @@ def mitigation_agent_interaction():
 @login_required
 def handle_generate_mitigation(data):
     """
-    Handles requests to generate mitigation commands based on an incident description.
+    Handle mitigation generation request from UI
     """
-    incident_description = data.get('incident_description')
-    if not incident_description:
-        emit('mitigation_response', {'status': 'error', 'message': 'Incident description is required.'})
-        return
-
-    # Access mitigation_utility from the current_app object
-    mitigation_utility_instance = current_app.mitigation_utility 
-    if not mitigation_utility_instance:
-        emit('mitigation_response', {'status': 'error', 'message': 'Mitigation agent not initialized. Check server logs.'})
-        return
-
     try:
-        action = mitigation_utility_instance.generate_mitigation_action(incident_description)
+        # Get all necessary data from the request
+        incident_description = data.get('incident_description', '')
+        src_ip = data.get('src_ip', '')
+        dst_ip = data.get('dst_ip', '')
+        anomaly_type = data.get('anomaly_type', '')
+        
+        # Create full description including IPs
+        full_description = f"""
+        Anomaly Type: {anomaly_type}
+        Description: {incident_description}
+        Source IP: {src_ip if src_ip else 'Not specified'}
+        Target IP: {dst_ip if dst_ip else 'Not specified'}
+        """
+        
+        # Generate mitigation commands
+        mitigation_utility = current_app.mitigation_utility
+        action = mitigation_utility.generate_mitigation_action(full_description)
+        
+        # Return results to UI
         emit('mitigation_response', {
             'status': 'success',
             'description': action.description,
-            'commands': action.commands
+            'commands': action.commands,
+            'src_ip': src_ip,  # Pass back for reference
+            'dst_ip': dst_ip   # Pass back for reference
         })
+        
     except Exception as e:
-        emit('mitigation_response', {'status': 'error', 'message': f'Error generating mitigation: {str(e)}'})
+        emit('mitigation_response', {
+            'status': 'error',
+            'message': f'Failed to generate mitigation: {str(e)}'
+        })
 
 # SocketIO event for executing mitigation commands
 @socketio.on('execute_commands', namespace='/')
@@ -778,7 +791,6 @@ def handle_deny_mitigation(data):
     emit('mitigation_approval_status', {'status': 'info', 'message': f'Mitigation for "{anomaly_type}" denied by user.'})
     logger.info(f"Mitigation for anomaly '{anomaly_type}' denied by user.")
 
-
 # --- Attack Simulation Functionality ---
 
 @main.route("/attack-simulation")
@@ -800,32 +812,35 @@ def handle_generate_attack_commands(data):
         emit('attack_commands_response', {'status': 'error', 'message': 'Target IP and attack scenario are required.'})
         return
     
-    # Access the AttackAgent instance from the current_app context
-    attack_agent_instance = current_app.attack_agent
-    if not attack_agent_instance:
-        emit('attack_commands_response', {'status': 'error', 'message': 'Attack agent not initialized. Check server logs.'})
-        return
+    try:
+        # Access the AttackAgent instance from the current_app context
+        attack_agent = current_app.attack_agent
+        if not attack_agent:
+            emit('attack_commands_response', {'status': 'error', 'message': 'Attack agent not initialized. Check server logs.'})
+            return
 
-    # Call the generate_commands method on the AttackAgent instance
-    commands = attack_agent_instance.generate_commands(target_ip, attack_scenario)
-    
-    # Check for error message from generate_commands
-    if commands.startswith("Error:"):
-        emit('attack_commands_response', {'status': 'error', 'message': commands})
-    else:
-        emit('attack_commands_response', {
-            'status': 'success',
-            'commands': commands,
-            'target_ip': target_ip,
-            'attack_scenario': attack_scenario
-        })
+        # Call the generate_commands method on the AttackAgent instance
+        commands = attack_agent.generate_commands(target_ip, attack_scenario)
+        
+        # Check for error message from generate_commands
+        if "Error generating commands" in commands:
+            emit('attack_commands_response', {'status': 'error', 'message': commands})
+        else:
+            emit('attack_commands_response', {
+                'status': 'success',
+                'commands': commands,
+                'target_ip': target_ip,
+                'attack_scenario': attack_scenario
+            })
+    except Exception as e:
+        emit('attack_commands_response', {'status': 'error', 'message': f'Error generating commands: {str(e)}'})
 
 
 @socketio.on('execute_attack_script', namespace='/')
 @login_required
 def handle_execute_attack_script(data):
     """
-    Sends and executes the generated attack script on the Kali VM in a background thread.
+    Handles the execution of attack scripts on the Kali VM.
     """
     script_content = data.get('script_content')
     target_ip = data.get('target_ip')
@@ -835,80 +850,64 @@ def handle_execute_attack_script(data):
         emit('attack_execution_response', {'status': 'error', 'message': 'Script content, target IP, and attack scenario are required.'})
         return
 
-    # Run the execution in a background task to avoid blocking the Flask server
-    socketio.start_background_task(
-        target=_execute_attack_script_background,
-        script_content=script_content,
-        target_ip=target_ip,
-        attack_scenario=attack_scenario
-    )
-    emit('attack_execution_response', {'status': 'info', 'message': 'Attack script execution initiated in background...'})
-
-def _execute_attack_script_background(script_content, target_ip, attack_scenario):
-    """Helper function to run script execution in a background thread."""
     try:
         # Access the AttackAgent instance from the current_app context
-        attack_agent_instance = current_app.attack_agent
-        if not attack_agent_instance:
-            socketio.emit('attack_execution_response', {'status': 'error', 'message': 'Attack agent not initialized. Cannot execute.'})
+        attack_agent = current_app.attack_agent
+        if not attack_agent:
+            emit('attack_execution_response', {'status': 'error', 'message': 'Attack agent not initialized. Check server logs.'})
             return
 
-        # Call the send_and_execute_script method on the AttackAgent instance
-        # Note: The send_and_execute_script method in cyber_attack.py now takes
-        # ip_address and attack_scenario directly, and generates commands internally.
-        # So, we don't pass script_content to it, but rather let it generate.
-        # However, the frontend sends script_content, so we need to adjust or make a choice.
-        # For simplicity and to match the existing frontend flow, we'll keep passing
-        # script_content (which was generated by the LLM in the previous step)
-        # and modify send_and_execute_script to accept it.
-        # Or, we can make send_and_execute_script only take ip and scenario,
-        # and re-generate commands. The latter is more robust if the LLM call fails
-        # in the first step or if commands are manually edited.
-        # Let's stick to the current flow for now: frontend sends generated commands.
-        # The `send_and_execute_script` in cyber_attack.py needs to be adjusted to
-        # accept `script_content` directly instead of generating it.
-
-        # REVISIT: The `send_and_execute_script` in cyber_attack.py currently
-        # generates commands internally. This is a mismatch with the frontend sending
-        # `script_content`. We need to decide:
-        # 1. Frontend sends (ip, scenario) -> Backend calls generate_commands -> Backend sends (ip, scenario, generated_commands) to execute.
-        # 2. Frontend sends (ip, scenario) -> Backend calls generate_commands (LLM) -> Frontend gets commands -> Frontend sends (ip, scenario, commands) to execute.
-        # The current frontend implements option 2. So, send_and_execute_script in cyber_attack.py
-        # should accept `script_content` directly.
-
-        # Let's adjust the cyber_attack.py's send_and_execute_script to accept script_content.
-        # For now, I'll assume send_and_execute_script is updated to accept script_content.
-        # If not, the `generated_commands` from the first step would need to be passed.
-        # Given the `cyber_attack.py` I last provided, `send_and_execute_script`
-        # generates commands internally. This means the `script_content` from the frontend
-        # is redundant if we call `send_and_execute_script` directly.
-
-        # To align with the frontend sending `script_content`, we need a new function in `cyber_attack.py`
-        # that *only* handles sending and executing a *pre-generated* script.
-        # Let's call it `execute_pregenerated_script_on_kali`.
-
-        # For now, I'll temporarily use the existing `_execute_ssh_command` for sending the script,
-        # as `send_and_execute_script` in `cyber_attack.py` is designed to do both generation and execution.
-        # This is a temporary workaround until `cyber_attack.py` is properly refactored for this use case.
-
-        # This is a critical point: The `send_and_execute_script` in `cyber_attack.py`
-        # is a high-level function that *generates* commands and then executes them.
-        # The frontend's `execute_attack_script` event *sends* already generated commands.
-        # This means we need a lower-level function in `cyber_attack.py` that just takes
-        # the script content and executes it.
-
-        # Let's assume a new function `execute_raw_script_on_kali(script_content, ip_address, attack_scenario)`
-        # will be added to `agents/cyber_attack.py`.
-        # For this response, I will include this new function in `agents/cyber_attack.py`
-        # and then use it here.
-
-        result = attack_agent_instance.execute_raw_script_on_kali(script_content, target_ip, attack_scenario)
+        # Execute in a background task to avoid blocking
+        socketio.start_background_task(
+            target=_execute_attack_background,
+            attack_agent=attack_agent,
+            script_content=script_content,
+            target_ip=target_ip,
+            attack_scenario=attack_scenario,
+            socketio=socketio
+        )
         
-        if result.get("status") == "error" or result.get("status") == "failed":
-            socketio.emit('attack_execution_response', {'status': 'error', 'message': result.get("message")})
-        else:
-            socketio.emit('attack_execution_response', {'status': 'success', 'message': result.get("message")})
+        emit('attack_execution_response', {'status': 'info', 'message': 'Attack execution started in background...'})
+        
     except Exception as e:
-        socketio.emit('attack_execution_response', {'status': 'error', 'message': f'Error during background execution: {str(e)}'})
+        emit('attack_execution_response', {'status': 'error', 'message': f'Error initiating attack execution: {str(e)}'})
 
 
+def _execute_attack_background(attack_agent, script_content, target_ip, attack_scenario, socketio):
+    """Background task for executing attack scripts."""
+    try:
+        # Execute the script on the Kali VM
+        result = attack_agent.execute_raw_script_on_kali(
+            script_content, 
+            target_ip, 
+            attack_scenario
+        )
+        
+        # Prepare response based on execution result
+        response = {
+            'status': result.get('status', 'unknown'),
+            'message': result.get('message', 'No message provided'),
+            'target_ip': target_ip,
+            'attack_scenario': attack_scenario
+        }
+
+        # Include additional details if available
+        if 'output' in result:
+            response['output'] = result['output']
+        if 'error' in result:
+            response['error'] = result['error']
+        if 'script_path' in result:
+            response['script_path'] = result['script_path']
+        if 'exit_status' in result:
+            response['exit_status'] = result['exit_status']
+
+        # Send the response back to the client
+        socketio.emit('attack_execution_response', response, namespace='/')
+        
+    except Exception as e:
+        socketio.emit('attack_execution_response', {
+            'status': 'error',
+            'message': f'Error during attack execution: {str(e)}',
+            'target_ip': target_ip,
+            'attack_scenario': attack_scenario
+        }, namespace='/')

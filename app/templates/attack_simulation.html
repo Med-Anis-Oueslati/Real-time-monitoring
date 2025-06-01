@@ -10,13 +10,13 @@
         <h3 style="margin-bottom: 1.5rem; color: #bbdefb;">Generate Attack Commands</h3>
         
         <div class="form-group" style="margin-bottom: 1.5rem; position: relative;">
-            <input type="text" id="targetIpInput" class="form-control" required style="width: 100%; padding: 12px 15px; border-radius: 8px; border: 1px solid #3b445a; background-color: #2a303c; color: #e3f2fd;">
-            <label for="targetIpInput" class="input-label" style="position: absolute; left: 15px; top: 12px; color: #cfd8dc; pointer-events: none; transition: all 0.2s ease; background-color: transparent; padding: 0;">Target IP Address</label>
+            <input type="text" id="targetIpInput" class="form-control" required style="width: 100%; padding: 12px 15px; border-radius: 8px; border: 1px solid #3b445a; background-color: #2a303c; color: #e3f2fd;" placeholder="">
+            <label for="targetIpInput" class="input-label" style="position: absolute; left: 15px; top: -18px; color: #bbdefb; pointer-events: none; transition: all 0.2s ease; background-color: rgba(13, 71, 161, 0.8); padding: 0 6px; font-size: 0.85rem; font-weight: 600; border-radius: 6px;">Target IP Address</label>   
         </div>
         
         <div class="form-group" style="margin-bottom: 1.5rem; position: relative;">
-            <textarea id="attackScenarioInput" class="form-control" rows="3" required style="width: 100%; padding: 12px 15px; border-radius: 8px; border: 1px solid #3b445a; background-color: #2a303c; color: #e3f2fd; resize: vertical;"></textarea>
-            <label for="attackScenarioInput" class="input-label" style="position: absolute; left: 15px; top: 12px; color: #cfd8dc; pointer-events: none; transition: all 0.2s ease; background-color: transparent; padding: 0;">Attack Scenario (e.g., "port scan", "exploit vulnerability")</label>
+            <textarea id="attackScenarioInput" class="form-control" rows="3" required style="width: 100%; padding: 12px 15px; border-radius: 8px; border: 1px solid #3b445a; background-color: #2a303c; color: #e3f2fd; resize: vertical;" placeholder=""></textarea>
+            <label for="attackScenarioInput" class="input-label" style="position: absolute; left: 15px; top: -18px; color: #bbdefb; pointer-events: none; transition: all 0.2s ease; background-color: rgba(13, 71, 161, 0.8); padding: 0 6px; font-size: 0.85rem; font-weight: 600; border-radius: 6px;">Attack Scenario (e.g., "port scan", "exploit vulnerability")</label>
         </div>
 
         <button id="generateCommandsBtn" class="btn primary" style="width: auto; padding: 12px 30px; font-size: 1rem; margin-bottom: 1rem;">Generate Commands</button>
@@ -58,39 +58,39 @@
         let currentAttackScenario = '';
 
         // --- Helper for Floating Labels ---
-        function setupFloatingLabel(inputElement) {
-            const labelElement = inputElement.nextElementSibling; // Assumes label is next sibling
+        // function setupFloatingLabel(inputElement) {
+        //     const labelElement = inputElement.nextElementSibling; // Assumes label is next sibling
             
-            function updateLabel() {
-                if (inputElement.value.trim() !== '') {
-                    labelElement.style.top = '-18px';
-                    labelElement.style.left = '10px';
-                    labelElement.style.fontSize = '0.85rem';
-                    labelElement.style.color = '#bbdefb';
-                    labelElement.style.fontWeight = '600';
-                    labelElement.style.background = 'rgba(13, 71, 161, 0.8)';
-                    labelElement.style.padding = '0 6px';
-                    labelElement.style.borderRadius = '6px';
-                } else {
-                    labelElement.style.top = '12px';
-                    labelElement.style.left = '15px';
-                    labelElement.style.fontSize = '1rem';
-                    labelElement.style.color = '#cfd8dc';
-                    labelElement.style.fontWeight = '400';
-                    labelElement.style.background = 'transparent';
-                    labelElement.style.padding = '0';
-                    labelElement.style.borderRadius = '0';
-                }
-            }
+        //     function updateLabel() {
+        //         if (inputElement.value.trim() !== '') {
+        //             labelElement.style.top = '-18px';
+        //             labelElement.style.left = '10px';
+        //             labelElement.style.fontSize = '0.85rem';
+        //             labelElement.style.color = '#bbdefb';
+        //             labelElement.style.fontWeight = '600';
+        //             labelElement.style.background = 'rgba(13, 71, 161, 0.8)';
+        //             labelElement.style.padding = '0 6px';
+        //             labelElement.style.borderRadius = '6px';
+        //         } else {
+        //             labelElement.style.top = '12px';
+        //             labelElement.style.left = '15px';
+        //             labelElement.style.fontSize = '1rem';
+        //             labelElement.style.color = '#cfd8dc';
+        //             labelElement.style.fontWeight = '400';
+        //             labelElement.style.background = 'transparent';
+        //             labelElement.style.padding = '0';
+        //             labelElement.style.borderRadius = '0';
+        //         }
+        //     }
 
-            inputElement.addEventListener('focus', updateLabel);
-            inputElement.addEventListener('blur', updateLabel);
-            // Initial check in case field is pre-filled (e.g., browser autofill)
-            updateLabel(); 
-        }
+        //     inputElement.addEventListener('focus', updateLabel);
+        //     inputElement.addEventListener('blur', updateLabel);
+        //     // Initial check in case field is pre-filled (e.g., browser autofill)
+        //     updateLabel(); 
+        // }
 
-        setupFloatingLabel(targetIpInput);
-        setupFloatingLabel(attackScenarioInput);
+        // setupFloatingLabel(targetIpInput);
+        // setupFloatingLabel(attackScenarioInput);
 
 
         // Function to display status messages

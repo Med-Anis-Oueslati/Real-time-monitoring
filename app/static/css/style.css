@@ -396,8 +396,10 @@ label {
 }
 
 .logo-img {
-    height: 140px; /* adjust as needed */
+
     vertical-align: middle;
+    width: 150px;
+    height: auto;
 }
 
 .vm-online {

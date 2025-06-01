@@ -91,7 +91,7 @@ class MitigationAgent:
             - Ensure commands are safe and avoid destructive actions (e.g., no 'rm -rf /').
             - Prioritize commands that are reversible where appropriate.
             - If the description lacks sufficient details (e.g., no IP, port, or specific process), return an empty command list and explain why in the description field, suggesting what information is needed.
-
+            - Generate commands even if there is no IP address provided.
             Specific Mitigation Strategies and Commands:
 
             1.  **Network-Based Attacks (e.g., DoS, Port Scans, Unauthorized Access Attempts):**

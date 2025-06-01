@@ -4,42 +4,50 @@
 
 {% block content %}
 <div class="container" style="margin-top: 3rem; text-align: center;">
-    <h2 style="margin-bottom: 2rem; color: #e1e8ff;">Anomaly Detection Agent</h2>
+    <h2 style="margin-bottom: 2rem; color: #e1e8ff;">Anomaly Detection & Mitigation</h2>
 
-    <div class="form-container" style="max-width: 800px; padding: 2rem;">
-        <h3 style="margin-bottom: 1.5rem; color: #bbdefb;">Initiate Anomaly Sweep</h3>
-        <button id="startSweepBtn" class="btn primary" style="width: auto; padding: 12px 30px; font-size: 1rem; margin-bottom: 1rem;">Make a Sweep</button>
-        
-        <div id="sweepStatus" class="flashes" style="margin-top: 1rem; display: none;"></div>
+    <div class="form-container" style="max-width: 1000px; padding: 2rem; margin: 0 auto;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 2rem;">
+            <div style="flex: 1; margin-right: 1rem;">
+                <h3 style="margin-bottom: 1.5rem; color: #bbdefb;">Initiate Anomaly Sweep</h3>
+                <button id="startSweepBtn" class="btn primary" style="width: 100%; padding: 12px; font-size: 1rem;">
+                    Start New Sweep
+                </button>
+                <div id="sweepStatus" class="flashes" style="margin-top: 1rem;"></div>
+            </div>
 
-        <h3 style="margin-top: 3rem; margin-bottom: 1.5rem; color: #bbdefb;">Detected Anomalies</h3>
-        <div id="anomalyList" style="text-align: left;">
-            <p id="noAnomaliesMessage" style="color: #cfd8dc; text-align: center; margin-top: 2rem;">No anomalies detected yet. Click "Make a Sweep" to start.</p>
-        </div>
-
-        {# Modal for Mitigation Approval #}
-        <div id="mitigationApprovalModal" class="modal" style="display: none;">
-            <div class="modal-content">
-                <span class="close-button">&times;</span>
-                <h4 style="color: #bbdefb; margin-bottom: 1rem;">Proposed Mitigation Action</h4>
-                <p id="modalAnomalyDescription" style="color: #c5cae9; margin-bottom: 1rem;"></p>
-                <ul id="modalMitigationCommands" style="list-style-type: disc; padding-left: 20px; color: #e3f2fd;"></ul>
-                <div style="display: flex; justify-content: center; gap: 1rem; margin-top: 2rem;">
-                    <button id="modalApproveBtn" class="btn primary" style="background-color: #4CAF50;">Approve</button>
-                    <button id="modalDenyBtn" class="btn secondary">Deny</button>
-                </div>
+            <div style="flex: 1; margin-left: 1rem;">
+                <h3 style="margin-bottom: 1.5rem; color: #bbdefb;">Execution Target</h3>
+                <select id="executionTarget" class="form-control" style="width: 100%;">
+                    <option value="">-- Select target for mitigation --</option>
+                    <option value="all">All affected systems</option>
+                    {% for vm in vms %}
+                    <option value="{{ vm.short_name }}">{{ vm.name }} ({{ vm.ip_address }})</option>
+                    {% endfor %}
+                </select>
+                <p style="color: #cfd8dc; font-size: 0.9rem; margin-top: 0.5rem;">
+                    Select where mitigation commands will execute
+                </p>
             </div>
         </div>
 
-        {# Modal for Mitigation Execution Status #}
-        <div id="mitigationStatusModal" class="modal" style="display: none;">
-            <div class="modal-content">
-                <span class="close-button">&times;</span>
-                <h4 style="color: #bbdefb; margin-bottom: 1rem;">Mitigation Execution Status</h4>
-                <p id="modalMitigationStatusMessage" style="color: #c5cae9; margin-bottom: 1rem;"></p>
-                <div id="modalMitigationStatusDetails" style="white-space: pre-wrap; font-family: monospace; color: #c5cae9; max-height: 200px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); padding: 10px; border-radius: 8px;"></div>
-                <button class="btn primary close-button" style="margin-top: 1.5rem;">Close</button>
+        <div id="anomalyList" style="text-align: left; margin-top: 2rem;">
+            <div id="noAnomaliesMessage" class="empty-state" style="text-align: center; padding: 2rem;">
+                <i class="fas fa-search" style="font-size: 3rem; color: #607d8b; margin-bottom: 1rem;"></i>
+                <h4 style="color: #bbdefb;">No anomalies detected</h4>
+                <p style="color: #cfd8dc;">Click "Start New Sweep" to begin anomaly detection</p>
             </div>
+        </div>
+
+        <!-- Execution Log Section -->
+        <div id="executionLogSection" style="margin-top: 3rem; display: none;">
+            <h3 style="margin-bottom: 1rem; color: #bbdefb; text-align: left;">Mitigation Execution Log</h3>
+            <div id="executionLog" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; max-height: 300px; overflow-y: auto;">
+                <pre id="logContent" style="color: #e3f2fd; margin: 0; font-family: 'Courier New', monospace; white-space: pre-wrap;"></pre>
+            </div>
+            <button id="clearLogBtn" class="btn secondary" style="margin-top: 1rem; float: right;">
+                Clear Log
+            </button>
         </div>
     </div>
 </div>
@@ -48,349 +56,533 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const socket = io();
-
         const startSweepBtn = document.getElementById('startSweepBtn');
         const sweepStatusDiv = document.getElementById('sweepStatus');
         const anomalyListDiv = document.getElementById('anomalyList');
         const noAnomaliesMessage = document.getElementById('noAnomaliesMessage');
+        const executionTarget = document.getElementById('executionTarget');
+        const executionLogSection = document.getElementById('executionLogSection');
+        const logContent = document.getElementById('logContent');
+        const clearLogBtn = document.getElementById('clearLogBtn');
 
-        const mitigationApprovalModal = document.getElementById('mitigationApprovalModal');
-        const modalAnomalyDescription = document.getElementById('modalAnomalyDescription');
-        const modalMitigationCommands = document.getElementById('modalMitigationCommands');
-        const modalApproveBtn = document.getElementById('modalApproveBtn');
-        const modalDenyBtn = document.getElementById('modalDenyBtn');
+        // Store anomalies and their mitigation data
+        let anomalies = [];
+        let activeMitigations = {};
 
-        const mitigationStatusModal = document.getElementById('mitigationStatusModal');
-        const modalMitigationStatusMessage = document.getElementById('modalMitigationStatusMessage');
-        const modalMitigationStatusDetails = document.getElementById('modalMitigationStatusDetails');
-
-        // Store the current anomaly data for approval/denial
-        let currentAnomalyForMitigation = null;
-
-        // Function to display status messages (similar to mitigation agent page)
-        function displayStatus(message, type) {
+        // Function to display status messages
+        function displayStatus(message, type = 'info') {
             sweepStatusDiv.textContent = message;
             sweepStatusDiv.className = `flashes ${type}`;
             sweepStatusDiv.style.display = 'block';
-            sweepStatusDiv.classList.add('fadeIn');
-            setTimeout(() => {
-                sweepStatusDiv.style.display = 'none';
-                sweepStatusDiv.classList.remove('fadeIn');
-            }, 5000);
+            
+            // Auto-hide after 5 seconds unless it's an error
+            if (type !== 'error') {
+                setTimeout(() => {
+                    sweepStatusDiv.style.display = 'none';
+                }, 5000);
+            }
         }
 
-        // --- Event Listeners ---
+        // Function to append to execution log
+        function appendToLog(message, type = 'info') {
+            executionLogSection.style.display = 'block';
+            const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
+            const color = type === 'error' ? '#EF9A9A' : type === 'success' ? '#A5D6A7' : '#bbdefb';
+            
+            logContent.innerHTML += `<span style="color: #607d8b;">[${timestamp}]</span> <span style="color: ${color}">${message}</span>\n`;
+            logContent.scrollTop = logContent.scrollHeight;
+        }
 
+        // Function to create anomaly card
+        function createAnomalyCard(anomaly) {
+            const card = document.createElement('div');
+            card.className = 'anomaly-card';
+            card.dataset.anomalyId = anomaly.id || Date.now();
+            
+            card.innerHTML = `
+                <div class="anomaly-header">
+                    <h4>${anomaly.type.replace(/_/g, ' ')}</h4>
+                    <span class="anomaly-timestamp">${anomaly.timestamp}</span>
+                    <span class="anomaly-severity ${anomaly.severity || 'medium'}">${anomaly.severity || 'MEDIUM'}</span>
+                </div>
+                <div class="anomaly-content">
+                    <p><strong>Description:</strong> ${anomaly.description}</p>
+                    ${anomaly.src_ip ? `<p><strong>Source:</strong> ${anomaly.src_ip}</p>` : ''}
+                    ${anomaly.dst_ip ? `<p><strong>Target:</strong> ${anomaly.dst_ip}</p>` : ''}
+                </div>
+                <div class="anomaly-actions">
+                    <button class="btn secondary propose-mitigation-btn">Propose Mitigation</button>
+                    <div class="mitigation-status"></div>
+                </div>
+                <div class="mitigation-panel" style="display: none;">
+                    <div class="mitigation-description"></div>
+                    <ul class="mitigation-commands"></ul>
+                    <button class="btn primary execute-mitigation-btn" style="display: none;">Execute Mitigation</button>
+                    <div class="execution-status"></div>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // Event Listeners
         startSweepBtn.addEventListener('click', function() {
-            displayStatus('Initiating anomaly detection sweep...', 'info');
-            startSweepBtn.disabled = true; // Disable button during sweep
+            displayStatus('Initiating anomaly detection sweep...');
+            startSweepBtn.disabled = true;
             socket.emit('start_anomaly_sweep');
         });
 
-        // --- Socket.IO Handlers ---
+        clearLogBtn.addEventListener('click', function() {
+            logContent.textContent = '';
+            executionLogSection.style.display = 'none';
+        });
 
+        // Socket.IO Handlers
         socket.on('anomaly_sweep_status', function(data) {
             displayStatus(data.message, data.status);
-            if (data.status !== 'info') { // Re-enable button unless it's just an info message
-                startSweepBtn.disabled = false;
+            startSweepBtn.disabled = false;
+            
+            if (data.status === 'success') {
+                appendToLog(`Anomaly sweep completed: ${data.message}`, 'success');
             }
         });
 
         socket.on('new_anomaly', function(anomaly) {
-            console.log("Received new anomaly:", anomaly);
-            noAnomaliesMessage.style.display = 'none'; // Hide "No anomalies" message
-
-            // Check if it's a summary or an individual incident
-            if (anomaly.type === 'summary') {
-                // Display the summary prominently
-                const summaryCard = document.createElement('div');
-                summaryCard.className = 'anomaly-card summary-card';
-                summaryCard.innerHTML = `
-                    <h4 style="color: #bbdefb;">Anomaly Sweep Summary (${anomaly.timestamp})</h4>
-                    <p>${anomaly.summary}</p>
-                `;
-                anomalyListDiv.prepend(summaryCard); // Add summary at the top
-            } else {
-                // Display individual incident
-                const anomalyCard = document.createElement('div');
-                anomalyCard.className = 'anomaly-card';
-                anomalyCard.innerHTML = `
-                    <h4 style="color: #bbdefb;">${anomaly.type.replace(/_/g, ' ')} Detected</h4>
-                    <p><strong>Description:</strong> ${anomaly.description}</p>
-                    <p><strong>Source IP:</strong> ${anomaly.src_ip || 'N/A'}</p>
-                    <p><strong>Destination IP:</strong> ${anomaly.dst_ip || 'N/A'}</p>
-                    <p><strong>Timestamp:</strong> ${anomaly.timestamp}</p>
-                    <button class="btn secondary propose-mitigation-btn" 
-                            data-description="${anomaly.description}"
-                            data-src-ip="${anomaly.src_ip || ''}"
-                            data-dst-ip="${anomaly.dst_ip || ''}"
-                            data-anomaly-type="${anomaly.type}"
-                            style="margin-top: 1rem;">Propose Mitigation</button>
-                `;
-                anomalyListDiv.appendChild(anomalyCard);
-
-                // Attach event listener for "Propose Mitigation" button
-                anomalyCard.querySelector('.propose-mitigation-btn').addEventListener('click', function() {
-                    currentAnomalyForMitigation = {
-                        description: this.dataset.description,
-                        src_ip: this.dataset.srcIp,
-                        dst_ip: this.dataset.dstIp,
-                        anomaly_type: this.dataset.anomalyType
-                    };
-                    displayMitigationApprovalModal(currentAnomalyForMitigation);
-                });
+            // Hide "no anomalies" message if it's the first one
+            if (anomalies.length === 0) {
+                noAnomaliesMessage.style.display = 'none';
             }
+            
+            // Add to our stored anomalies
+            anomaly.id = anomaly.id || Date.now();
+            anomalies.push(anomaly);
+            
+            // Create and append the card
+            const card = createAnomalyCard(anomaly);
+            anomalyListDiv.appendChild(card);
+            
+            // Add event listener for mitigation button
+            card.querySelector('.propose-mitigation-btn').addEventListener('click', function() {
+                const mitigationPanel = card.querySelector('.mitigation-panel');
+                const isOpen = mitigationPanel.style.display === 'block';
+                
+                if (!isOpen) {
+                    // Request mitigation options
+                    displayStatus(`Generating mitigation for ${anomaly.type}...`);
+                    socket.emit('generate_mitigation', {
+                        incident_description: anomaly.description,
+                        anomaly_type: anomaly.type,
+                        src_ip: anomaly.src_ip,
+                        dst_ip: anomaly.dst_ip
+                    });
+                    
+                    // Store reference to this anomaly
+                    activeMitigations[anomaly.id] = {
+                        card: card,
+                        anomaly: anomaly
+                    };
+                }
+                
+                // Toggle panel visibility
+                mitigationPanel.style.display = isOpen ? 'none' : 'block';
+            });
+            
+            appendToLog(`New anomaly detected: ${anomaly.type}`, 'info');
         });
 
-        // --- Mitigation Approval Modal Logic ---
-
-        function displayMitigationApprovalModal(anomalyData) {
-            modalAnomalyDescription.textContent = anomalyData.description;
-            modalMitigationCommands.innerHTML = '<li>Generating commands...</li>'; // Placeholder
-            mitigationApprovalModal.style.display = 'flex'; // Show modal
-
-            // Request commands from the server
-            socket.emit('generate_mitigation', { incident_description: anomalyData.description });
-            
-            // Re-enable buttons
-            modalApproveBtn.disabled = false;
-            modalDenyBtn.disabled = false;
-        }
-
-        // Handle the response from the 'generate_mitigation' event (from routes.py)
         socket.on('mitigation_response', function(data) {
-            if (mitigationApprovalModal.style.display === 'flex') { // Only update if modal is open
-                modalMitigationCommands.innerHTML = ''; // Clear placeholder
-                if (data.status === 'success' && data.commands && data.commands.length > 0) {
-                    data.commands.forEach(cmd => {
-                        const li = document.createElement('li');
-                        li.textContent = cmd;
-                        modalMitigationCommands.appendChild(li);
-                    });
-                    currentAnomalyForMitigation.commands = data.commands; // Store commands for approval
+    console.log("Received mitigation response:", data); // Debug log
+    
+    // Find which anomaly this belongs to
+    let targetAnomalyId = null;
+    
+    // Method 1: Check if response contains anomaly_id
+    if (data.anomaly_id) {
+        targetAnomalyId = data.anomaly_id;
+    } 
+    // Method 2: Find most recent open mitigation panel
+    else {
+        const openPanels = document.querySelectorAll('.mitigation-panel[style*="display: block"]');
+        if (openPanels.length > 0) {
+            targetAnomalyId = openPanels[openPanels.length - 1].closest('.anomaly-card').dataset.anomalyId;
+        }
+    }
+
+    if (!targetAnomalyId) {
+        console.error("Could not determine target anomaly for mitigation response");
+        return;
+    }
+
+    const card = document.querySelector(`.anomaly-card[data-anomaly-id="${targetAnomalyId}"]`);
+    if (!card) {
+        console.error("Could not find anomaly card for ID:", targetAnomalyId);
+        return;
+    }
+
+    const mitigationPanel = card.querySelector('.mitigation-panel');
+    const descriptionDiv = card.querySelector('.mitigation-description');
+    const commandsList = card.querySelector('.mitigation-commands');
+    const executeBtn = card.querySelector('.execute-mitigation-btn');
+
+    // Clear previous content
+    descriptionDiv.innerHTML = '';
+    commandsList.innerHTML = '';
+    
+    // Always show the mitigation panel
+    mitigationPanel.style.display = 'block';
+
+    if (data.status === 'success') {
+        // Update description
+        descriptionDiv.innerHTML = `
+            <div class="mitigation-header">
+                <h5>Mitigation Analysis</h5>
+                <span class="status-badge success">Generated</span>
+            </div>
+            <div class="mitigation-content">
+                <p>${data.description || 'No additional description provided'}</p>
+            </div>
+        `;
+
+        // Update commands list
+        if (data.commands && data.commands.length > 0) {
+            commandsList.innerHTML = '<h6>Recommended Investigation Commands:</h6>';
+            
+            data.commands.forEach((cmd, index) => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div class="command-container">
+                        <span class="command-number">${index + 1}.</span>
+                        <code class="command-text">${cmd.replace(/<IP>/g, '<span class="placeholder">[IP]</span>')}</code>
+                    </div>
+                `;
+                commandsList.appendChild(li);
+            });
+            
+            executeBtn.style.display = 'inline-block';
+            executeBtn.disabled = false;
+            
+            // Update execute button handler
+            executeBtn.onclick = function() {
+                const target = executionTarget.value;
+                if (!target) {
+                    displayStatus('Please select an execution target first', 'error');
+                    return;
+                }
+                
+                displayStatus(`Executing investigation commands...`, 'info');
+                appendToLog(`Starting command execution for anomaly ${targetAnomalyId} on ${target}`);
+                
+                socket.emit('execute_commands', {
+                    vm_short_name: target,
+                    commands: data.commands,
+                    anomaly_id: targetAnomalyId
+                });
+                
+                executeBtn.disabled = true;
+                card.querySelector('.execution-status').innerHTML = 
+                    '<div class="execution-pending">Executing commands...</div>';
+            };
+        } else {
+            commandsList.innerHTML = `
+                <div class="no-commands">
+                    <i class="fas fa-info-circle"></i>
+                    <p>No specific commands generated</p>
+                </div>
+            `;
+            executeBtn.style.display = 'none';
+        }
+    } else {
+        descriptionDiv.innerHTML = `
+            <div class="mitigation-header">
+                <h5>Mitigation Analysis</h5>
+                <span class="status-badge error">Failed</span>
+            </div>
+            <div class="error-message">
+                ${data.message || 'Failed to generate mitigation'}
+            </div>
+        `;
+        executeBtn.style.display = 'none';
+    }
+});
+
+        socket.on('execution_response', function(data) {
+            if (data.anomaly_id && activeMitigations[data.anomaly_id]) {
+                const { card } = activeMitigations[data.anomaly_id];
+                const statusDiv = card.querySelector('.execution-status');
+                const executeBtn = card.querySelector('.execute-mitigation-btn');
+                
+                executeBtn.disabled = false;
+                
+                if (data.status === 'success') {
+                    statusDiv.innerHTML = '<div class="execution-success">Mitigation executed successfully</div>';
+                    appendToLog(`Mitigation executed successfully for anomaly ${data.anomaly_id}`, 'success');
+                    
+                    // Add detailed results if available
+                    if (data.results && data.results.length > 0) {
+                        const details = document.createElement('div');
+                        details.className = 'execution-details';
+                        details.innerHTML = '<h6>Command Results:</h6>';
+                        
+                        const ul = document.createElement('ul');
+                        data.results.forEach((result, i) => {
+                            const li = document.createElement('li');
+                            li.style.color = result[0] ? '#A5D6A7' : '#EF9A9A';
+                            li.textContent = `Command ${i+1}: ${result[0] ? 'SUCCESS' : 'FAILED'} - ${result[1]}`;
+                            ul.appendChild(li);
+                            
+                            // Add to main log
+                            appendToLog(`Command ${i+1}: ${result[0] ? 'SUCCESS' : 'FAILED'} - ${result[1]}`, 
+                                      result[0] ? 'success' : 'error');
+                        });
+                        
+                        details.appendChild(ul);
+                        statusDiv.appendChild(details);
+                    }
                 } else {
-                    const li = document.createElement('li');
-                    li.textContent = data.message || 'No specific commands proposed or error occurred.';
-                    modalMitigationCommands.appendChild(li);
-                    currentAnomalyForMitigation.commands = []; // Clear commands if none generated
-                    modalApproveBtn.disabled = true; // Disable approve if no commands
+                    statusDiv.innerHTML = `<div class="execution-error">Error: ${data.message || 'Execution failed'}</div>`;
+                    appendToLog(`Mitigation failed for anomaly ${data.anomaly_id}: ${data.message}`, 'error');
                 }
             }
         });
-
-        modalApproveBtn.addEventListener('click', function() {
-            if (currentAnomalyForMitigation && currentAnomalyForMitigation.commands && currentAnomalyForMitigation.commands.length > 0) {
-                socket.emit('approve_mitigation', {
-                    incident_description: currentAnomalyForMitigation.description,
-                    commands: currentAnomalyForMitigation.commands,
-                    src_ip: currentAnomalyForMitigation.src_ip,
-                    dst_ip: currentAnomalyForMitigation.dst_ip,
-                    anomaly_type: currentAnomalyForMitigation.anomaly_type
-                });
-                mitigationApprovalModal.style.display = 'none'; // Hide approval modal
-                displayStatus('Sending approval for mitigation...', 'info');
-            } else {
-                displayStatus('No commands to approve.', 'error');
-            }
-        });
-
-        modalDenyBtn.addEventListener('click', function() {
-            if (currentAnomalyForMitigation) {
-                socket.emit('deny_mitigation', { anomaly_type: currentAnomalyForMitigation.anomaly_type });
-                mitigationApprovalModal.style.display = 'none'; // Hide approval modal
-                displayStatus('Mitigation denied.', 'info');
-            }
-        });
-
-        // Handle mitigation approval/denial status from server
-        socket.on('mitigation_approval_status', function(data) {
-            modalMitigationStatusMessage.textContent = data.message;
-            modalMitigationStatusDetails.innerHTML = ''; // Clear previous details
-
-            if (data.details && data.details.length > 0) {
-                data.details.forEach((detail, index) => {
-                    const [success, msg] = detail;
-                    const p = document.createElement('p');
-                    p.style.color = success ? '#A5D6A7' : '#EF9A9A'; // Green for success, red for failure
-                    p.textContent = `Command ${index + 1}: ${success ? 'SUCCESS' : 'FAILED'} - ${msg}`;
-                    modalMitigationStatusDetails.appendChild(p);
-                });
-            } else if (data.status === 'error') {
-                const p = document.createElement('p');
-                p.style.color = '#EF9A9A';
-                p.textContent = data.message;
-                modalMitigationStatusDetails.appendChild(p);
-            }
-
-            mitigationStatusModal.style.display = 'flex'; // Show status modal
-            displayStatus(data.message, data.status); // Also show as a flash message
-        });
-
-        // Close buttons for modals
-        document.querySelectorAll('.close-button').forEach(button => {
-            button.addEventListener('click', function() {
-                mitigationApprovalModal.style.display = 'none';
-                mitigationStatusModal.style.display = 'none';
-            });
-        });
-
-        // Handle floating label behavior for textarea (copied from mitigation_agent_interaction.html)
-        incidentDescriptionInput.addEventListener('focus', () => {
-            incidentDescriptionInput.nextElementSibling.style.top = '-18px';
-            incidentDescriptionInput.nextElementSibling.style.left = '10px';
-            incidentDescriptionInput.nextElementSibling.style.fontSize = '0.85rem';
-            incidentDescriptionInput.nextElementSibling.style.color = '#bbdefb';
-            incidentDescriptionInput.nextElementSibling.style.fontWeight = '600';
-            incidentDescriptionInput.nextElementSibling.style.background = 'rgba(13, 71, 161, 0.8)';
-            incidentDescriptionInput.nextElementSibling.style.padding = '0 6px';
-            incidentDescriptionInput.nextElementSibling.style.borderRadius = '6px';
-        });
-
-        incidentDescriptionInput.addEventListener('blur', () => {
-            if (incidentDescriptionInput.value.trim() === '') {
-                incidentDescriptionInput.nextElementSibling.style.top = '12px';
-                incidentDescriptionInput.nextElementSibling.style.left = '15px';
-                incidentDescriptionInput.nextElementSibling.style.fontSize = '1rem';
-                incidentDescriptionInput.nextElementSibling.style.color = '#cfd8dc';
-                incidentDescriptionInput.nextElementSibling.style.fontWeight = '400';
-                incidentDescriptionInput.nextElementSibling.style.background = 'transparent';
-                incidentDescriptionInput.nextElementSibling.style.padding = '0';
-                incidentDescriptionInput.nextElementSibling.style.borderRadius = '0';
-            }
-        });
-        if (incidentDescriptionInput.value.trim() !== '') {
-            incidentDescriptionInput.nextElementSibling.style.top = '-18px';
-            incidentDescriptionInput.nextElementSibling.style.left = '10px';
-            incidentDescriptionInput.nextElementSibling.style.fontSize = '0.85rem';
-            incidentDescriptionInput.nextElementSibling.style.color = '#bbdefb';
-            incidentDescriptionInput.nextElementSibling.style.fontWeight = '600';
-            incidentDescriptionInput.nextElementSibling.style.background = 'rgba(13, 71, 161, 0.8)';
-            incidentDescriptionInput.nextElementSibling.style.padding = '0 6px';
-            incidentDescriptionInput.nextElementSibling.style.borderRadius = '6px';
-        }
     });
 </script>
+
 <style>
-    /* General Modal Styles */
-    .modal {
-        display: none; /* Hidden by default */
-        position: fixed; /* Stay in place */
-        z-index: 1001; /* Sit on top */
-        left: 0;
-        top: 0;
-        width: 100%; /* Full width */
-        height: 100%; /* Full height */
-        overflow: auto; /* Enable scroll if needed */
-        background-color: rgba(0,0,0,0.7); /* Black w/ opacity */
-        justify-content: center;
+    /* Base Styles */
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 15px;
+    }
+    
+    .btn {
+        border: none;
+        border-radius: 6px;
+        padding: 10px 20px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .btn.primary {
+        background-color: #2196F3;
+        color: white;
+    }
+    
+    .btn.primary:hover {
+        background-color: #0d8aee;
+    }
+    
+    .btn.secondary {
+        background-color: #607d8b;
+        color: white;
+    }
+    
+    .btn.secondary:hover {
+        background-color: #546e7a;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #3b445a;
+        background-color: rgba(255, 255, 255, 0.08);
+        color: #e3f2fd;
+    }
+    
+    /* Anomaly Card Styles */
+    .anomaly-card {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid #2196F3;
+    }
+    
+    .anomaly-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .anomaly-header h4 {
+        margin: 0;
+        color: #bbdefb;
+        flex: 1;
+        min-width: 200px;
+        text-transform: capitalize;
+    }
+    
+    .anomaly-timestamp {
+        color: #90a4ae;
+        font-size: 0.9rem;
+        margin: 0 1rem;
+    }
+    
+    .anomaly-severity {
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+    
+    .anomaly-severity.high {
+        background-color: #ef5350;
+        color: white;
+    }
+    
+    .anomaly-severity.medium {
+        background-color: #ffa726;
+        color: #263238;
+    }
+    
+    .anomaly-severity.low {
+        background-color: #66bb6a;
+        color: white;
+    }
+    
+    .anomaly-content {
+        margin-bottom: 1rem;
+    }
+    
+    .anomaly-content p {
+        margin: 0.5rem 0;
+        color: #e3f2fd;
+    }
+    
+    .anomaly-actions {
+        display: flex;
+        justify-content: space-between;
         align-items: center;
     }
-
-    .modal-content {
-        background-color: #1a202c; /* Dark background */
-        margin: auto;
-        padding: 30px;
-        border: 1px solid #3b445a;
-        border-radius: 12px;
-        width: 80%;
-        max-width: 600px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        position: relative;
+    
+    /* Mitigation Panel Styles */
+    .mitigation-panel {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #3b445a;
     }
-
-    .close-button {
-        color: #aaa;
-        float: right;
-        font-size: 28px;
-        font-weight: bold;
-        cursor: pointer;
-        position: absolute;
-        top: 10px;
-        right: 20px;
-    }
-
-    .close-button:hover,
-    .close-button:focus {
-        color: #e3f2fd;
-        text-decoration: none;
-        cursor: pointer;
-    }
-
-    /* Anomaly Card Styling */
-    .anomaly-card {
-        background: rgba(255, 255, 255, 0.08);
-        padding: 1.5rem;
-        border-radius: 12px;
+    
+    .mitigation-description {
         margin-bottom: 1rem;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        color: #e3f2fd;
+        color: #c5cae9;
     }
-
-    .anomaly-card h4 {
-        color: #bbdefb;
-        margin-bottom: 0.8rem;
+    
+    .mitigation-commands {
+        list-style-type: none;
+        padding: 0;
+        margin: 1rem 0;
+        background: rgba(0,0,0,0.2);
+        border-radius: 6px;
+        padding: 1rem;
     }
-
-    .anomaly-card p {
+    
+    .mitigation-commands li {
         margin-bottom: 0.5rem;
+        padding: 0.5rem;
+        font-family: 'Courier New', monospace;
+        background: rgba(0,0,0,0.1);
+        border-radius: 4px;
+        color: #bbdefb;
     }
-
-    .summary-card {
-        background: rgba(33, 150, 243, 0.15); /* Slightly different background for summary */
-        border: 1px solid #2196f3;
+    
+    /* Status Messages */
+    .flashes {
+        padding: 12px;
+        border-radius: 6px;
+        margin: 1rem 0;
+        display: none;
     }
-
-    /* Existing styles from previous updates */
+    
     .flashes.info {
-        background-color: #2196f3a8;
-        color: #e3f2fd;
-        box-shadow: 0 0 12px #2196f3a8;
+        background-color: rgba(33, 150, 243, 0.2);
+        color: #bbdefb;
+        border-left: 4px solid #2196F3;
     }
-
-    #vmSelect {
-        appearance: none;
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23bbdefb%22%20d%3D%22M287%2C114.7L146.2%2C255.5L5.4%2C114.7H287z%22%2F%3E%3C%2Fsvg%3E');
-        background-repeat: no-repeat;
-        background-position: right 10px center;
-        background-size: 16px;
-        padding-right: 30px;
+    
+    .flashes.success {
+        background-color: rgba(76, 175, 80, 0.2);
+        color: #c8e6c9;
+        border-left: 4px solid #4CAF50;
     }
-
-    .spinner {
-        border: 4px solid rgba(255, 255, 255, 0.3);
-        border-top: 4px solid #bbdefb;
-        border-radius: 50%;
-        width: 20px;
-        height: 20px;
-        animation: spin 1s linear infinite;
-        display: inline-block;
-        vertical-align: middle;
-        margin-right: 10px;
+    
+    .flashes.error {
+        background-color: rgba(244, 67, 54, 0.2);
+        color: #ffcdd2;
+        border-left: 4px solid #F44336;
     }
-
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+    
+    /* Execution Status */
+    .execution-status {
+        margin-top: 1rem;
     }
-
-    .collapsible-output {
-        max-height: 150px;
-        overflow-y: auto;
-        transition: max-height 0.3s ease-out;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 10px;
+    
+    .execution-pending {
+        color: #ffb74d;
+    }
+    
+    .execution-success {
+        color: #81c784;
+    }
+    
+    .execution-error {
+        color: #e57373;
+    }
+    
+    .execution-details {
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .execution-details h6 {
+        margin: 0.5rem 0;
+        color: #90a4ae;
+    }
+    
+    /* Empty State */
+    .empty-state {
+        background: rgba(255,255,255,0.03);
         border-radius: 8px;
-        margin-top: 10px;
+        padding: 2rem;
+        margin: 2rem 0;
     }
-
-    .collapsible-output.collapsed {
-        max-height: 150px;
+    
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+        .form-container {
+            padding: 1rem;
+        }
+        
+        .anomaly-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .anomaly-header h4 {
+            margin-bottom: 0.5rem;
+        }
+        
+        .anomaly-timestamp, .anomaly-severity {
+            margin: 0.25rem 0;
+        }
     }
+    .info-message {
+    color: #90caf9;
+    font-style: italic;
+    padding: 0.5rem;
+    background: rgba(144, 202, 249, 0.1);
+    border-radius: 4px;
+}
 
-    .collapsible-output:not(.collapsed) {
-        max-height: 500px;
+    .error-message {
+        color: #ef9a9a;
+        padding: 0.5rem;
+        background: rgba(239, 154, 154, 0.1);
+        border-radius: 4px;
     }
 </style>
 {% endblock %}

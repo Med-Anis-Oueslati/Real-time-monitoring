@@ -27,7 +27,7 @@ with app.app_context():
         lubuntu_vm = VM(
             name='Lubuntu VM',
             short_name='lubuntu',
-            ip_address='172.20.10.5',
+            ip_address='10.71.0.162',
             ssh_username='anis',
             ssh_password='root',
             description='My Lubuntu analysis VM',
@@ -41,7 +41,7 @@ with app.app_context():
         kali_vm = VM(
             name='Kali VM',
             short_name='kali',
-            ip_address='172.20.10.4',
+            ip_address='10.71.0.120',
             ssh_username='kali',
             ssh_password='kali',
             description='My Kali penetration testing VM',

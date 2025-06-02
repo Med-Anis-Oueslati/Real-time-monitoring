@@ -17,15 +17,15 @@ sleep 5
 # List of your 6 Spark script filenames
 # **IMPORTANT: Replace these with the actual names of your 6 scripts**
 SPARK_SCRIPTS=(
-  # "zeek_capture_loss_transform.py" # Example: zeek_capture_loss_transform.py
-  # "zeek_conn_transform.py" # Example: zeek_conn_transform.py
-  # "zeek_dns_transform.py" # Example: zeek_dns_transform.py
-  # "zeek_http_transform.py" # Example: zeek_http_transform.py
-  # "zeek_notice_transform.py" # Example: zeek_notice_transform.py
-  # "zeek_ssl_transform.py" # Example: zeek_ssl_transform.py
-  # "system_metrics.py"
-  # "transform_tshark.py"
-  "transform_auth.py" # Example: transform_tshark.py
+  "zeek_capture_loss_transform.py" # Example: zeek_capture_loss_transform.py
+  "zeek_conn_transform.py" # Example: zeek_conn_transform.py
+  "zeek_dns_transform.py" # Example: zeek_dns_transform.py
+  "zeek_http_transform.py" # Example: zeek_http_transform.py
+  "zeek_notice_transform.py" # Example: zeek_notice_transform.py
+  "zeek_ssl_transform.py" # Example: zeek_ssl_transform.py
+  "system_metrics.py"
+  "transform_tshark.py"
+  # "transform_auth.py" # Example: transform_tshark.py
 )
 
 # Common Spark submission parameters for cluster mode

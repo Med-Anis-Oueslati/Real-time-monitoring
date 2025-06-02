@@ -174,7 +174,7 @@ class AnomalyDetectionAgent:
             cursor = self.conn.cursor()
             query = """
             INSERT INTO SPARK_DB.SPARK_SCHEMA.ANOMALIES
-            (TIMESTAMP, ATTACK_TYPE, DESCRIPTION, SRC_IP, DST_IP)
+            ("TIMESTAMP", ATTACK_TYPE, DESCRIPTION, SRC_IP, DST_IP)
             VALUES (%s, %s, %s, %s, %s)
             """
             for incident in incidents:

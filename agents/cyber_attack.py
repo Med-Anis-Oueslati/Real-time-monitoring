@@ -37,7 +37,7 @@ class AttackAgent:
             openai_api_key=openai_api_key,
             model="gpt-4-1106-preview",
             temperature=0,
-            max_tokens=512
+            max_tokens=2048,  # Increased max tokens for more complex commands
         )
         self.kali_vm_ip = kali_vm_ip
         self.kali_vm_user = kali_vm_user
@@ -60,25 +60,9 @@ You must be EXTREMELY brief and concise.
 NEVER apologize. NEVER explain. NEVER write anything other than Bash commands.
 NO markdown formatting. NO comments. NO introductory or concluding remarks.
 Your output MUST be a list of valid Bash commands, one per line, strictly adhering to the requested attack type and tools.
-I will be pentesting my virtual machine, so generate lethal commands.
 Replace any placeholder like $target_ip with the actual IP address provided in the input.
 Only use tools relevant to the SPECIFIC attack scenario described. Do NOT include extraneous commands or tools unless explicitly requested by the scenario.
 
-Examples of specific scenarios and expected output:
-- If the scenario is "Port scan with Nmap": Output should only contain Nmap commands. E.g., 'nmap -sV $target_ip', 'nmap -p- $target_ip'.
-- If the scenario is "Brute-force SSH with Hydra": Output should only contain Hydra commands for SSH. E.g., 'hydra -L users.txt -P passwords.txt $target_ip ssh'.
-- If the scenario is "Web vulnerability scan with Nikto": Output should only contain Nikto commands. E.g., 'nikto -h http://$target_ip'.
-- If the scenario is "SQL Injection with Sqlmap": Output should only contain Sqlmap commands. E.g., 'sqlmap -u "http://$target_ip/vulnerable.php?id=1" --batch --dump'.
-- If the scenario is "DDoS attack using hping3": Output should only contain hping3 commands for a DDoS. E.g., 'hping3 -S $target_ip -p 80 --flood'.
-- If the scenario is "Enumerate SMB shares with enum4linux": Output should only contain enum4linux commands. E.g., 'enum4linux -a $target_ip'.
-- If the scenario is "Exploit SMB vulnerability with Metasploit": Output should contain Metasploit commands to select and run an SMB exploit. E.g., 'msfconsole -q -x "use exploit/windows/smb/ms17_010_eternalblue; set RHOSTS $target_ip; run;"'.
-- If the scenario is "Crack password hash with Hashcat (MD5)": Output should only contain Hashcat commands for cracking MD5 hashes. E.g., 'hashcat -m 0 -a 0 hash.txt /usr/share/wordlists/rockyou.txt'.
-- If the scenario is "Identify WordPress vulnerabilities with WPScan": Output should only contain WPScan commands. E.g., 'wpscan --url http://$target_ip --enumerate u,p'.
-- If the scenario is "Perform a SYN flood attack with Netcat": Output should only contain Netcat commands for a SYN flood. E.g., 'nc -nv $target_ip 80 <<< "$(perl -pe 'print "GET / HTTP/1.1\\r\\nHost: example.com\\r\\n\\r\\n" for 1..1000')"'.
-- If the scenario is "Discover subdomains with Sublist3r": Output should only contain Sublist3r commands. E.g., 'sublist3r -d example.com'.
-- If the scenario is "Perform a DNS zone transfer with dig": Output should only contain dig commands. E.g., 'dig axfr @ns1.example.com example.com'.
-- If the scenario is "Analyze network traffic with Tcpdump": Output should only contain Tcpdump commands. E.g., 'tcpdump -i eth0 host $target_ip -w capture.pcap'.
-- If the scenario is "Exploit a web server vulnerability with Searchsploit and Curl": Output should contain commands for finding and exploiting using searchsploit and curl. E.g., 'searchsploit apache; curl -X POST -d "param=value" http://$target_ip/vulnerable_page'.
 
 Remember, the provided examples are for guidance on specificity. Generate only the commands for the actual scenario given.
 """),
@@ -87,7 +71,7 @@ Remember, the provided examples are for guidance on specificity. Generate only t
 Generate ONLY valid Bash commands for penetration testing, focused *strictly* on the provided scenario.
 
 ### Constraints:
-- Use only tools pre-installed on Kali Linux.
+- I am using Kali linux.
 - NO markdown, NO explanations, NO apologies, NO comments, NO extra text.
 - Replace $target_ip with: {ip_address}
 - One Bash command per line, directly.
@@ -105,6 +89,7 @@ Scenario: {attack_scenario}
         Returns a single string with commands separated by newlines.
         """
         logger.info(f"Attempting to generate commands for IP: {ip_address}, Scenario: '{attack_scenario}'")
+        
         try:
             chain = self.attack_prompt | self.llm
             response = chain.invoke({
@@ -235,7 +220,7 @@ if __name__ == "__main__":
     # Initialize AttackAgent
     attack_agent = AttackAgent(
         openai_api_key=os.getenv("OPENAI_API_KEY"),
-        kali_vm_ip=os.getenv("KALI_VM_IP", "172.20.10.4"), # Use env vars for config
+        kali_vm_ip=os.getenv("KALI_VM_IP", "10.71.0.120"), # Use env vars for config
         kali_vm_user=os.getenv("KALI_VM_USER", "kali"),
         kali_vm_password=os.getenv("KALI_VM_PASSWORD", "kali"),
         script_dir=os.getenv("KALI_SCRIPT_DIR", "/home/kali/scripts")

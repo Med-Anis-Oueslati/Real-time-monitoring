@@ -199,7 +199,23 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./grafana_data:/var/lib/grafana²
+      - ./grafana_data:/var/lib/grafana
+
+#WEBAPP CONTAINER
+  webapp:
+    build:
+      context: .
+      dockerfile: Dockerfile.webapp
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/usr/src/app
+    depends_on:
+      - db
+      - kafka
+    networks:
+      - fluentkafka
+      - hdfs_network
 
 #NETWORKS
 networks:
